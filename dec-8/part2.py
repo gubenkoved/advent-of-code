@@ -29,55 +29,61 @@ if __name__ == '__main__':
 
         best_z_score = 0
 
+        cycles = []
+
         # compute cycles
         for cur in cur_set:
-            print('Compute cycle that starts with %s' % cur)
-
+            # print('Compute cycle that starts with %s...' % cur)
             cursor = cur
             step_counter = 0
-            states = set()
-            states.add((cursor, step_counter))
-            cycle = []
-            cycle.append(cur)
+            cycle = [
+                (cur, 0)
+            ]
 
             while True:
                 direction = steps[step_counter % n]
                 cursor = m[cursor][0] if direction == 'L' else m[cursor][1]
                 step_counter += 1
 
-                if (cursor, step_counter % n) in states:
-                    print('Cycle found! Len %d' % len(cycle))
-                    # print(cycle)
+                next_state = (cursor, step_counter % n)
+
+                if next_state in cycle:
+                    offset = cycle.index(next_state)
+                    z_index = None
+                    for node_idx, (node, _) in enumerate(cycle):
+                        if node.endswith('Z'):
+                            assert z_index is None
+                            z_index = node_idx
+                    z_offset = z_index - offset
+                    print('Cycle found! Full Len %d, Cycle Offset %d, Cycle Len %d, Z offset %d, Z index %d' % (
+                        len(cycle), offset, len(cycle) - offset, z_offset, z_index))
+                    cycles.append(cycle)
                     break
-                else:
-                    cycle.append(cursor)
-                    states.add((cursor, step_counter % n))
 
-        print('Run simulation...')
+                cycle.append((cursor, step_counter % n))
 
-        while True:
-            direction = steps[steps_count % n]
+        # it turns out that z_index == cycle len! why though?
+        # it simplifies the computation
+        # then go to wolframalpha
+        # lcm(18157, 11653, 21409, 12737, 14363, 15989)
+        # result: 9064949303801
+        # .. or actually use math.lcm()
 
-            next_cur_set = []
-            for cur in cur_set:
-                if direction == 'L':
-                    next_cur_set.append(m[cur][0])
-                else:
-                    next_cur_set.append(m[cur][1])
-            cur_set = next_cur_set
+        # for cycle_idx, cycle in enumerate(cycles):
+        #     cycle_nodes = [t[0] for t in cycle]
+        #     print('Unique nodes in cycle %d: %d' % (cycle_idx, len(set(cycle_nodes))))
 
-            steps_count += 1
+        # print('compute nodes usage in cycles...')
+        # for node in m:
+        #     cycle_idxs = []
+        #     for cycle_idx, cycle in enumerate(cycles):
+        #         if node in cycle:
+        #             cycle_idxs.append(cycle_idx)
+        #     print('%s used in cycles: %s' % (node, cycle_idxs))
 
-            z_count = sum(1 for cur in cur_set if cur[-1] == 'Z')
+        # print('print cycles...')
+        # for cycle_idx, cycle in enumerate(cycles):
+        #     print('cycle #%d, len %d' % (cycle_idx, len(cycle)))
+        #     cycle_nodes = [t[0] for t in cycle]
+        #     print(' '.join(cycle_nodes))
 
-            # print('STEP %6d: %s (Z-SCORE %d)' % (steps_count, cur_set, z_count))
-
-            best_z_score = max(best_z_score, z_count)
-
-            if steps_count % 100000 == 0:
-                print('STEP %d, BEST Z SCORE %d' % (steps_count, best_z_score))
-
-            if z_count == len(cur_set):
-                break
-
-        print('took %d steps' % steps_count)
