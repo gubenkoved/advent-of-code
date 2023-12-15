@@ -6,7 +6,7 @@ if __name__ == '__main__':
             line = f.readline()
             if not line:
                 break
-            springs, groups_text = line.strip('\n').split( )
+            springs, groups_text = line.strip('\n').split(' ')
             group_sizes = [int(x) for x in groups_text.split(',')]
             data.append(
                 (springs, group_sizes)
