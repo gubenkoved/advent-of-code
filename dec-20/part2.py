@@ -1,6 +1,6 @@
+import os.path
 from collections import namedtuple, defaultdict, deque
 from typing import Dict
-import pyvis
 import pyvis.network
 
 ModuleDef = namedtuple('ModuleDef', ['type', 'outputs'])
@@ -21,7 +21,6 @@ class ConjunctionState:
 
 
 if __name__ == '__main__':
-
     modules: Dict[str, ModuleDef] = {}
     with open('data.txt', 'r') as f:
         while True:
@@ -49,34 +48,38 @@ if __name__ == '__main__':
         for output_module_name in module_def.outputs:
             inputs[output_module_name].append(module_name)
 
-    # visualize with pyvis
-    g = pyvis.network.Network(
-        # 100% does not render properly for height...
-        height='1000px', width='100%',
-        directed=True,
-    )
-    for module in modules:
-        color = '#4f4f4f'  # gray-ish
-        if modules[module].type == '%':
-            color = '#a12a69'  # red-ish
-        elif modules[module].type == '&':
-            color = '#3273a8'  # blue-ish
-        g.add_node(
-            n_id=module,
-            label=module,
-            color=color,
-            font='20px Ubuntu black',
+    def visualize():
+        # visualize with pyvis
+        g = pyvis.network.Network(
+            # 100% does not render properly for height...
+            height='1000px', width='100%',
+            directed=True,
         )
-
-    # create edges
-    for module in modules:
-        for out_module in modules[module].outputs:
-            g.add_edge(
-                source=module,
-                to=out_module,
-                # arrowStrikethrough=True,
+        for module in modules:
+            color = '#4f4f4f'  # gray-ish
+            if modules[module].type == '%':
+                color = '#a12a69'  # red-ish
+            elif modules[module].type == '&':
+                color = '#3273a8'  # blue-ish
+            g.add_node(
+                n_id=module,
+                label=module,
+                color=color,
+                font='20px Ubuntu black',
             )
-    g.show('graph.html', notebook=False)
+
+        # create edges
+        for module in modules:
+            for out_module in modules[module].outputs:
+                g.add_edge(
+                    source=module,
+                    to=out_module,
+                    # arrowStrikethrough=True,
+                )
+        g.show('graph.html', notebook=False)
+
+    if not os.path.exists('graph.html'):
+        visualize()
 
     # initialize state map
     state_map = {}
@@ -98,6 +101,7 @@ if __name__ == '__main__':
         return HIGH if state == LOW else LOW
 
     rx_signaled = False
+    pulses = []
 
     def simulate_one():
         global rx_signaled
@@ -111,7 +115,7 @@ if __name__ == '__main__':
 
         while active_queue:
             source, pulse, target = active_queue.popleft()
-            # pulses.append((source, pulse, target))
+            pulses.append((source, pulse, target))
 
             if target == 'rx' and pulse == LOW:
                 rx_signaled = True
@@ -149,13 +153,25 @@ if __name__ == '__main__':
             elif modules[target].type == 'dummy':
                 pass
 
-
     press_count = 0
     while not rx_signaled:
         press_count += 1
         simulate_one()
 
-        if press_count % 1000 == 0:
-            print('pressed %d' % press_count)
+        # see graph visualization
+        for key_module in ['qs', 'pg', 'sv', 'sp']:
+            if any(pulse == HIGH and source == key_module for source, pulse, target in pulses):
+                print('[%s] HIGH pulse after %s presses' % (key_module, press_count))
 
-    print(press_count)
+        pulses.clear()
+
+        if press_count == 10000:
+            break
+
+    # periods from output above:
+    # qs: 4051
+    # pg: 3761
+    # sv: 3919
+    # sp: 3907
+    import math
+    print(math.lcm(4051, 3761, 3919, 3907))
