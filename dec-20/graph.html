@@ -1,0 +1,155 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1000px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#a12a69", "font": "20px Ubuntu black", "id": "tx", "label": "tx", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "nx", "label": "nx", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "nr", "label": "nr", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "nk", "label": "nk", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "mv", "label": "mv", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "pz", "label": "pz", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "jt", "label": "jt", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "vp", "label": "vp", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "qs", "label": "qs", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "lj", "label": "lj", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "jh", "label": "jh", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "xc", "label": "xc", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "hx", "label": "hx", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "kd", "label": "kd", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "jq", "label": "jq", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "lp", "label": "lp", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "ph", "label": "ph", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "sv", "label": "sv", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "ff", "label": "ff", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "th", "label": "th", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "kt", "label": "kt", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "ct", "label": "ct", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "mh", "label": "mh", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "pg", "label": "pg", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "fn", "label": "fn", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "sk", "label": "sk", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "nv", "label": "nv", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "dx", "label": "dx", "shape": "dot"}, {"color": "#4f4f4f", "font": "20px Ubuntu black", "id": "broadcaster", "label": "broadcaster", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "dt", "label": "dt", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "fx", "label": "fx", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "rv", "label": "rv", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "gv", "label": "gv", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "fk", "label": "fk", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "cj", "label": "cj", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "xk", "label": "xk", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "vh", "label": "vh", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "zb", "label": "zb", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "mb", "label": "mb", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "kn", "label": "kn", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "jc", "label": "jc", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "sp", "label": "sp", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "hp", "label": "hp", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "jf", "label": "jf", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "fb", "label": "fb", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "xm", "label": "xm", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "jm", "label": "jm", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "vr", "label": "vr", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "hr", "label": "hr", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "jp", "label": "jp", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "rn", "label": "rn", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "pp", "label": "pp", "shape": "dot"}, {"color": "#3273a8", "font": "20px Ubuntu black", "id": "gf", "label": "gf", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "xb", "label": "xb", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "bx", "label": "bx", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "bc", "label": "bc", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "qt", "label": "qt", "shape": "dot"}, {"color": "#a12a69", "font": "20px Ubuntu black", "id": "vk", "label": "vk", "shape": "dot"}, {"color": "#4f4f4f", "font": "20px Ubuntu black", "id": "rx", "label": "rx", "shape": "dot"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "tx", "to": "dx"}, {"arrows": "to", "from": "nx", "to": "fn"}, {"arrows": "to", "from": "nx", "to": "rn"}, {"arrows": "to", "from": "nr", "to": "cj"}, {"arrows": "to", "from": "nr", "to": "mh"}, {"arrows": "to", "from": "nk", "to": "jt"}, {"arrows": "to", "from": "nk", "to": "vk"}, {"arrows": "to", "from": "mv", "to": "fk"}, {"arrows": "to", "from": "mv", "to": "rn"}, {"arrows": "to", "from": "pz", "to": "kt"}, {"arrows": "to", "from": "pz", "to": "pg"}, {"arrows": "to", "from": "pz", "to": "mb"}, {"arrows": "to", "from": "pz", "to": "vr"}, {"arrows": "to", "from": "pz", "to": "hp"}, {"arrows": "to", "from": "pz", "to": "jp"}, {"arrows": "to", "from": "pz", "to": "tx"}, {"arrows": "to", "from": "jt", "to": "fb"}, {"arrows": "to", "from": "jt", "to": "zb"}, {"arrows": "to", "from": "jt", "to": "jq"}, {"arrows": "to", "from": "jt", "to": "sv"}, {"arrows": "to", "from": "jt", "to": "lp"}, {"arrows": "to", "from": "vp", "to": "lp"}, {"arrows": "to", "from": "vp", "to": "jt"}, {"arrows": "to", "from": "qs", "to": "gf"}, {"arrows": "to", "from": "lj", "to": "jt"}, {"arrows": "to", "from": "lj", "to": "dt"}, {"arrows": "to", "from": "jh", "to": "mh"}, {"arrows": "to", "from": "xc", "to": "nx"}, {"arrows": "to", "from": "hx", "to": "xb"}, {"arrows": "to", "from": "kd", "to": "pz"}, {"arrows": "to", "from": "kd", "to": "pp"}, {"arrows": "to", "from": "jq", "to": "jt"}, {"arrows": "to", "from": "jq", "to": "qt"}, {"arrows": "to", "from": "lp", "to": "jm"}, {"arrows": "to", "from": "ph", "to": "mb"}, {"arrows": "to", "from": "ph", "to": "pz"}, {"arrows": "to", "from": "sv", "to": "gf"}, {"arrows": "to", "from": "ff", "to": "xc"}, {"arrows": "to", "from": "th", "to": "mh"}, {"arrows": "to", "from": "th", "to": "hx"}, {"arrows": "to", "from": "kt", "to": "ct"}, {"arrows": "to", "from": "ct", "to": "kd"}, {"arrows": "to", "from": "ct", "to": "pz"}, {"arrows": "to", "from": "mh", "to": "bc"}, {"arrows": "to", "from": "mh", "to": "qs"}, {"arrows": "to", "from": "mh", "to": "hx"}, {"arrows": "to", "from": "mh", "to": "xb"}, {"arrows": "to", "from": "mh", "to": "nv"}, {"arrows": "to", "from": "pg", "to": "gf"}, {"arrows": "to", "from": "fn", "to": "kn"}, {"arrows": "to", "from": "sk", "to": "hr"}, {"arrows": "to", "from": "nv", "to": "mh"}, {"arrows": "to", "from": "nv", "to": "th"}, {"arrows": "to", "from": "dx", "to": "pz"}, {"arrows": "to", "from": "dx", "to": "ph"}, {"arrows": "to", "from": "broadcaster", "to": "bx"}, {"arrows": "to", "from": "broadcaster", "to": "jq"}, {"arrows": "to", "from": "broadcaster", "to": "nv"}, {"arrows": "to", "from": "broadcaster", "to": "jp"}, {"arrows": "to", "from": "dt", "to": "jt"}, {"arrows": "to", "from": "dt", "to": "zb"}, {"arrows": "to", "from": "fx", "to": "sk"}, {"arrows": "to", "from": "fx", "to": "rn"}, {"arrows": "to", "from": "rv", "to": "rn"}, {"arrows": "to", "from": "gv", "to": "mh"}, {"arrows": "to", "from": "gv", "to": "nr"}, {"arrows": "to", "from": "fk", "to": "rn"}, {"arrows": "to", "from": "fk", "to": "rv"}, {"arrows": "to", "from": "cj", "to": "mh"}, {"arrows": "to", "from": "cj", "to": "vh"}, {"arrows": "to", "from": "xk", "to": "jt"}, {"arrows": "to", "from": "xk", "to": "nk"}, {"arrows": "to", "from": "vh", "to": "mh"}, {"arrows": "to", "from": "vh", "to": "jh"}, {"arrows": "to", "from": "zb", "to": "fb"}, {"arrows": "to", "from": "mb", "to": "jc"}, {"arrows": "to", "from": "kn", "to": "rn"}, {"arrows": "to", "from": "kn", "to": "mv"}, {"arrows": "to", "from": "jc", "to": "pz"}, {"arrows": "to", "from": "jc", "to": "kt"}, {"arrows": "to", "from": "sp", "to": "gf"}, {"arrows": "to", "from": "hp", "to": "tx"}, {"arrows": "to", "from": "jf", "to": "bc"}, {"arrows": "to", "from": "jf", "to": "mh"}, {"arrows": "to", "from": "fb", "to": "vp"}, {"arrows": "to", "from": "xm", "to": "mh"}, {"arrows": "to", "from": "xm", "to": "gv"}, {"arrows": "to", "from": "jm", "to": "jt"}, {"arrows": "to", "from": "jm", "to": "xk"}, {"arrows": "to", "from": "vr", "to": "hp"}, {"arrows": "to", "from": "hr", "to": "ff"}, {"arrows": "to", "from": "jp", "to": "pz"}, {"arrows": "to", "from": "jp", "to": "vr"}, {"arrows": "to", "from": "rn", "to": "fn"}, {"arrows": "to", "from": "rn", "to": "hr"}, {"arrows": "to", "from": "rn", "to": "bx"}, {"arrows": "to", "from": "rn", "to": "ff"}, {"arrows": "to", "from": "rn", "to": "xc"}, {"arrows": "to", "from": "rn", "to": "sp"}, {"arrows": "to", "from": "rn", "to": "sk"}, {"arrows": "to", "from": "pp", "to": "pz"}, {"arrows": "to", "from": "gf", "to": "rx"}, {"arrows": "to", "from": "xb", "to": "jf"}, {"arrows": "to", "from": "bx", "to": "rn"}, {"arrows": "to", "from": "bx", "to": "fx"}, {"arrows": "to", "from": "bc", "to": "xm"}, {"arrows": "to", "from": "qt", "to": "lj"}, {"arrows": "to", "from": "qt", "to": "jt"}, {"arrows": "to", "from": "vk", "to": "jt"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
