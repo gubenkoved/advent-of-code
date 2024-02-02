@@ -1,3 +1,6 @@
+import plotly.express as px
+
+
 if __name__ == '__main__':
     field = []
     with open('data.txt', 'r') as f:
@@ -21,14 +24,14 @@ if __name__ == '__main__':
     visited = set()
     layer = [start]
     step = 0
-    last_reachable = 0
 
     def at(r, c):
         return field[r % rows][c % cols]
 
     odd_dist_count, even_dist_count = 0, 0
+    reachable = []
 
-    while True:
+    while step < 1000:
         next_layer = []
         for position in layer:
             if position in visited:
@@ -54,8 +57,26 @@ if __name__ == '__main__':
                     next_layer.append(candidate)
 
         layer = next_layer
-        diff = len(visited) - last_reachable
-        print('step %6d reachable %8d [%-8d+%8d] %+6d from prev' % (
-            step, len(visited), odd_dist_count, even_dist_count, diff))
-        last_reachable = len(visited)
+        if step % 65 == 0:
+            print('step %6d visited %10d [%-10d+%10d]' % (
+                step, len(visited), odd_dist_count, even_dist_count))
+
+        if step % 2 == 0:
+            reachable.append({
+                'step': step,
+                'count': even_dist_count
+            })
+        else:
+            reachable.append({
+                'step': step,
+                'count': odd_dist_count
+            })
         step += 1
+
+    fig = px.line(
+        y=[p['count'] for p in reachable],
+        x=[p['step'] for p in reachable],
+        markers=False,
+    )
+    # fig.write_html('vis.html')
+    fig.show()
