@@ -2,31 +2,27 @@ from typing import Tuple
 import sys
 
 
-sys.setrecursionlimit(1000000)
+def read_field():
+    field = []
+
+    with open('data.txt', 'r') as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            field.append(line.strip())
+    return field
 
 
-field = []
-
-with open('data.txt', 'r') as f:
-    while True:
-        line = f.readline()
-        if not line:
-            break
-        field.append(line.strip())
-
-rows, cols = len(field), len(field[0])
-overall_longest = 0
-
-
-def walk(cur: Tuple[int, int], constraint: str, visited: set) -> int:
-    global overall_longest
-
+def walk(field, cur: Tuple[int, int], constraint: str, visited: set, on_step_fn=None) -> int:
     row, col = cur
+
+    if on_step_fn:
+        on_step_fn(cur, visited)
 
     # finished
     if row == len(field) - 1:
-        overall_longest = max(overall_longest, len(visited))
-        print('path with len %5d found, longest so far: %5d steps' % (len(visited), overall_longest))
+        print('path with len %5d found' % len(visited))
         return len(visited)
 
     if constraint == '>':
@@ -56,23 +52,32 @@ def walk(cur: Tuple[int, int], constraint: str, visited: set) -> int:
     longest = -1
 
     for neighbor in neighbors:
-        if neighbor[0] < 0 or neighbor[0] >= rows:
+        if neighbor[0] < 0 or neighbor[0] >= len(field):
             continue
-        if neighbor[1] < 0 or neighbor[1] >= cols:
+        if neighbor[1] < 0 or neighbor[1] >= len(field[0]):
             continue
         if field[neighbor[0]][neighbor[1]] == '#':
             continue
         if neighbor not in visited:
             visited.add(neighbor)
             neighbor_char = field[neighbor[0]][neighbor[1]]
-            inner_count = walk(neighbor, neighbor_char, visited)
+            inner_count = walk(field, neighbor, neighbor_char, visited, on_step_fn)
             longest = max(longest, inner_count)
             visited.discard(neighbor)
 
     return longest
 
 
-print(walk(
-    cur=(0, 1),
-    constraint='',
-    visited=set()))
+def solve():
+    sys.setrecursionlimit(1000000)
+    field = read_field()
+
+    print(walk(
+        field,
+        cur=(0, 1),
+        constraint='',
+        visited=set()))
+
+
+if __name__ == '__main__':
+    solve()
