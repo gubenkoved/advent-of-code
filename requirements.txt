@@ -1,3 +1,5 @@
 pyvis
 plotly
 pandas
+dash
+dash-bootstrap-components
