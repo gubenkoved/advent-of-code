@@ -1,4 +1,5 @@
 import copy
+import math
 from collections import defaultdict, deque
 import itertools
 
@@ -56,13 +57,25 @@ def find_most_distant_from(adjacency, source):
 # however we do not need it to be perfect;
 # this works in O(V + E) time, but exact solution for this problem would require
 # checking distances to all nodes from all nodes making it O(V * (V + E)), however
-# it is still okay
-def find_most_distant_nodes_pair(adjacency):
+# it is still okay;
+# See https://cs.stackexchange.com/questions/41681/maximize-distance-between-k-nodes-in-a-graph;
+def find_most_distant_nodes_pair_rough(adjacency):
     nodes = list(adjacency.keys())
     a = nodes[0]  # pick any node
     b, _ = find_most_distant_from(adjacency, a)
     c, _ = find_most_distant_from(adjacency, b)
     return b, c
+
+
+def find_most_distant_nodes_pair_exact(adjacency):
+    result = None
+    max_distance = -1
+    for node in adjacency:
+        node2, distance = find_most_distant_from(adjacency, node)
+        if distance > max_distance:
+            result = (node, node2)
+            max_distance = distance
+    return result
 
 
 def find_shortest_path_between(adjacency, start, end):
@@ -129,7 +142,7 @@ def remove_edge(adjacency, from_, to_):
 
 
 for _ in range(3):
-    a, b = find_most_distant_nodes_pair(mutable_adjacency)
+    a, b = find_most_distant_nodes_pair_exact(mutable_adjacency)
     path = find_shortest_path_between(mutable_adjacency, a, b)
     removed_in_round = []
     for idx in range(1, len(path)):
@@ -137,6 +150,9 @@ for _ in range(3):
         removed_in_round.append((from_, to_))
         remove_edge(mutable_adjacency, from_, to_)
     bridge_paths.append(removed_in_round)
+
+
+print('bridge paths found!')
 
 
 # optional optimization: for removed edges check starting from the center as
