@@ -36,53 +36,57 @@ with open('edges.csv', 'w') as f:
 
 def find_most_distant_from(adjacency, source):
     queue = deque()
-    queue.append(source)
+    queue.append((source, 0))
     visited = set()
-    cur = None
+    most_distant = None
     while queue:
-        cur = queue.popleft()
+        cur, dist = queue.popleft()
         if cur in visited:
             continue
         visited.add(cur)
+        if most_distant is None or dist > most_distant[1]:
+            most_distant = cur, dist
         for neighbor in adjacency[cur]:
             if neighbor not in visited:
-                queue.append(neighbor)
-    # we can just return latest node we visited actually...
-    assert cur is not None
-    return cur
+                queue.append((neighbor, dist + 1))
+    return most_distant
 
 
+# WARNING: this does NOT guarantee that we find two most distant pair overall
+# however we do not need it to be perfect;
+# this works in O(V + E) time, but exact solution for this problem would require
+# checking distances to all nodes from all nodes making it O(V * (V + E)), however
+# it is still okay
 def find_most_distant_nodes_pair(adjacency):
     nodes = list(adjacency.keys())
-    # pick any node
-    a = nodes[0]
-    b = find_most_distant_from(adjacency, a)
-    c = find_most_distant_from(adjacency, b)
+    a = nodes[0]  # pick any node
+    b, _ = find_most_distant_from(adjacency, a)
+    c, _ = find_most_distant_from(adjacency, b)
     return b, c
 
 
 def find_shortest_path_between(adjacency, start, end):
     queue = deque()
-    queue.append(start)
+    queue.append((start, None))
     visited = set()
-    prev = {}  # node -> prev node
+    prev_map = {}  # node -> prev node
 
     while queue:
-        cur = queue.popleft()
+        cur, prev = queue.popleft()
         if cur in visited:
             continue
         visited.add(cur)
+        prev_map[cur] = prev
         for neighbor in adjacency[cur]:
             if neighbor not in visited:
-                queue.append(neighbor)
-                prev[neighbor] = cur
+                queue.append((neighbor, cur))
 
     # trace path back
     path = []
     cur = end
     while cur:
         path.append(cur)
-        cur = prev.get(cur, None)
+        cur = prev_map[cur]
     return list(reversed(path))
 
 
@@ -116,7 +120,7 @@ def components(adjacency):
 
 
 mutable_adjacency = copy.deepcopy(adjacency)
-removed_edges = []  # list of lists for removed edges in each round
+bridge_paths = []  # list of lists for bridge edges in each round
 
 
 def remove_edge(adjacency, from_, to_):
@@ -132,7 +136,7 @@ for _ in range(3):
         from_, to_ = path[idx-1], path[idx]
         removed_in_round.append((from_, to_))
         remove_edge(mutable_adjacency, from_, to_)
-    removed_edges.append(removed_in_round)
+    bridge_paths.append(removed_in_round)
 
 
 # optional optimization: for removed edges check starting from the center as
@@ -155,10 +159,10 @@ def reorder(items):
     return result
 
 
-removed_edges = [reorder(x) for x in removed_edges]
+bridge_paths = [reorder(x) for x in bridge_paths]
 
 # try to remove now
-for e1, e2, e3 in itertools.product(*removed_edges):
+for e1, e2, e3 in itertools.product(*bridge_paths):
     mutable_adjacency = copy.deepcopy(adjacency)
 
     print('checking (%s, %s, %s)' % (e1, e2, e3))
