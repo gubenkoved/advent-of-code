@@ -37,9 +37,12 @@ def is_loopy(field):
         if next[0] >= rows or next[0] < 0 or next[1] >= cols or next[1] < 0:
             return False  # no loop
 
+        # rotate if necessary
         if field[next[0]][next[1]] == '#':
-            direction = rotate(direction)
-            next = (cur[0] + direction[0], cur[1] + direction[1])
+            while field[next[0]][next[1]] == '#':
+                direction = rotate(direction)
+                next = (cur[0] + direction[0], cur[1] + direction[1])
+            assert field[next[0]][next[1]] != '#'
             cur = next
         else:
             # move forward
@@ -51,13 +54,12 @@ for row in range(rows):
     for col in range(cols):
         if field[row][col] in ('#', '^'):
             continue
-        field2 = copy.deepcopy(field)
-        field2[row][col] = '#'
-        if is_loopy(field2):
+        tmp = field[row][col]
+        field[row][col] = '#'
+        if is_loopy(field):
             print('new obstacle at %r' % ((row, col),))
             result += 1
+        field[row][col] = tmp
 
-# are there some edge-cases not handled correctly?
-# [1900, 1949]
 print(result)
 
