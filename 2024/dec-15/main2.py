@@ -74,7 +74,7 @@ def pos_in_direction(pos, direction):
         assert False, 'what?'
 
 
-def can_move(pos, direction):
+def move_impl(pos, direction, dry_run):
     if at(pos) == '#':
         return False
     elif at(pos) == '.':
@@ -91,59 +91,36 @@ def can_move(pos, direction):
             assert at(right_pos) == ']'
             next_pos_left = pos_in_direction(left_pos, direction)
             next_pos_right = pos_in_direction(right_pos, direction)
-            if can_move(next_pos_left, direction) and can_move(next_pos_right, direction):
+            if move_impl(next_pos_left, direction, dry_run) and move_impl(next_pos_right, direction, dry_run):
+                if not dry_run:
+                    set(next_pos_left, '[')
+                    set(next_pos_right, ']')
+                    set(left_pos, '.')
+                    set(right_pos, '.')
                 return True
             else:
                 return False
         else:
             # left/right there is no binding
             next_pos = pos_in_direction(pos, direction)
-            if can_move(next_pos, direction):
+            if move_impl(next_pos, direction, dry_run):
+                if not dry_run:
+                    set(next_pos, at(pos))
+                    set(pos, '.')
                 return True
             else:
                 return False
     else:
         assert False, 'what?'
-
-
-def do_move(pos, direction):
-    if at(pos) == '#':
-        assert False, 'can not!'
-    elif at(pos) == '.':
-        pass
-    elif at(pos) in ('[', ']'):
-        if direction in ('^', 'v'):
-            if at(pos) == '[':
-                left_pos = pos
-                right_pos = (pos[0], pos[1] + 1)
-            elif at(pos) == ']':
-                left_pos = (pos[0], pos[1] - 1)
-                right_pos = pos
-            next_pos_left = pos_in_direction(left_pos, direction)
-            next_pos_right = pos_in_direction(right_pos, direction)
-            do_move(next_pos_left, direction)
-            do_move(next_pos_right, direction)
-            set(next_pos_left, '[')
-            set(next_pos_right, ']')
-            set(left_pos, '.')
-            set(right_pos, '.')
-        else:
-            # left/right there is no binding
-            next_pos = pos_in_direction(pos, direction)
-            do_move(next_pos, direction)
-            assert at(next_pos) == '.'
-            set(next_pos, at(pos))
-            set(pos, '.')
-    else:
-        assert False, 'what?'
-
 
 
 def move_if_possible(pos, direction):
-    ok = can_move(pos, direction)
-    if ok:
-        do_move(pos, direction)
-    return ok
+    # we need first pass so that we can make sure that both parts of the box
+    # could be moved, and only then make a pass where we actually move it
+    could_do = move_impl(pos, direction, dry_run=True)
+    if could_do:
+        move_impl(pos, direction, dry_run=False)
+    return could_do
 
 
 def print_field(path):
