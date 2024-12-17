@@ -108,6 +108,19 @@ def run_4(reg_a):
     return tuple(output)
 
 
+def run_5(reg_a):
+    output = []
+    while True:
+        reg_b = (reg_a % 8) ^ 2
+        # reg_b is in [0, 7]
+        reg_b ^= 3 ^ (reg_a >> reg_b)
+        output.append(reg_b % 8)
+        reg_a = reg_a >> 3
+        if reg_a == 0:
+            break
+    return tuple(output)
+
+
 for n in range(10 ** 10):
     reg_a = n
 
@@ -117,10 +130,11 @@ for n in range(10 ** 10):
     # r1 = run(reg_a, reg_b, reg_c, instructions)
     # r2 = run_2(reg_a)
     # r3 = run_3(reg_a)
-    r4 = run_4(reg_a)
-    r = r4
+    # r4 = run_4(reg_a)
+    r5 = run_5(reg_a)
+    r = r5
 
-    # if r1 != r4:
+    # if r5 != r4:
     #     assert False, 'wrong sim at %s' % reg_a
 
     if r == instructions:
