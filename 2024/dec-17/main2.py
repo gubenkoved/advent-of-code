@@ -121,25 +121,35 @@ def run_5(reg_a):
     return tuple(output)
 
 
-for n in range(10 ** 10):
-    reg_a = n
+def seeds(bit_len):
+    for num in range(2 ** bit_len):
+        result = run(num, 0, 0, instructions)
+        if result and result[0] == instructions[0]:
+            yield num
 
-    if reg_a % 1000000 == 0:
-        print(reg_a)
 
-    # r1 = run(reg_a, reg_b, reg_c, instructions)
-    # r2 = run_2(reg_a)
-    # r3 = run_3(reg_a)
-    # r4 = run_4(reg_a)
-    r5 = run_5(reg_a)
-    r = r5
+def solver(prefix_len):
+    if prefix_len == 1:
+        yield from seeds(bit_len=10)
+        return
 
-    # if r5 != r4:
-    #     assert False, 'wrong sim at %s' % reg_a
+    bit_offset = 10 + 3 * (prefix_len - 2)
+    bit_step = 3
 
-    if r == instructions:
-        print('*** %s' % reg_a)
-        break
+    # recursion step
+    for num in solver(prefix_len - 1):
+        for delta in range(2 ** bit_step):
+            new_num = num + (delta << bit_offset)
+            result = run(new_num, 0, 0, instructions)
+            if result and result[:prefix_len] == instructions[:prefix_len]:
+                yield new_num
 
-    if r == instructions[:len(r)]:
-        print('prefix match! %d: %s' % (reg_a, r))
+# for num in range(2 ** 19):
+#     res = run_5(num)
+#     if len(res) >= 4 and res[:4] == instructions[:4]:
+#         print('%r, %r' % (num, res))
+
+for num in solver(len(instructions)):
+    print(num)
+
+print(min(solver(len(instructions))))
