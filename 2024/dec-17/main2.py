@@ -68,10 +68,32 @@ def run(reg_a, reg_b, reg_c, instructions):
     return tuple(output)
 
 
-for reg_a in range(10 ** 8, 10 ** 9):
+# converted program
+def run_2(reg_a):
+    output = []
+    while True:
+        reg_b = reg_a % 8
+        reg_b = reg_b ^ 2
+        reg_c = int(reg_a / (2 ** reg_b))
+        reg_b = reg_b ^ reg_c
+        reg_b = reg_b ^ 3
+        output.append(reg_b % 8)
+        reg_a = int(reg_a / 8)
+        if reg_a == 0:
+            break
+    return tuple(output)
+
+
+for reg_a in range(10 ** 10):
     if reg_a % 10000 == 0:
         print(reg_a)
 
-    if run(reg_a, reg_b, reg_c, instructions) == instructions:
+    # r1 = run(reg_a, reg_b, reg_c, instructions)
+    r2 = run_2(reg_a)
+
+    # if r1 != r2:
+    #     assert False, 'wrong sim at %s' % reg_a
+
+    if r2 == instructions:
         print('*** %s' % reg_a)
         break
