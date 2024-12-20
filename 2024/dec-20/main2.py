@@ -80,12 +80,9 @@ for cheat_start_row in range(rows):
         if field[cheat_start_row][cheat_start_col] == '#':
             continue
         for cheat_end_row in range(cheat_start_row - max_cheat_distance, cheat_start_row + max_cheat_distance + 1):
-            for cheat_end_col in range(cheat_start_col - max_cheat_distance, cheat_start_col + max_cheat_distance + 1):
+            cheat_rows_diff = abs(cheat_end_row - cheat_start_row)
+            for cheat_end_col in range(cheat_start_col - (max_cheat_distance - cheat_rows_diff), cheat_start_col + (max_cheat_distance - cheat_rows_diff) + 1):
                 cheat_dist = abs(cheat_end_row - cheat_start_row) + abs(cheat_end_col - cheat_start_col)
-                if cheat_dist > max_cheat_distance:
-                    continue
-                if cheat_dist == 0:
-                    continue
                 if cheat_end_row < 0 or cheat_end_row >= rows:
                     continue
                 if cheat_end_col < 0 or cheat_end_col >= cols:
