@@ -1,6 +1,7 @@
-import functools
 import heapq
+import time
 
+started_at = time.time()
 file = open('data.txt', 'r')
 field = []
 
@@ -23,10 +24,10 @@ for row in range(rows):
             end = (row, col)
 
 
-@functools.lru_cache(maxsize=None)
-def shortest(start, end):
+def shortest_from(start):
     heap = [(0, start)]
     visited = set()
+    distances_map = {}
 
     while heap:
         dist, (r, c) = heapq.heappop(heap)
@@ -35,9 +36,7 @@ def shortest(start, end):
             continue
 
         visited.add((r, c))
-
-        if (r, c) == end:
-            return dist
+        distances_map[(r, c)] = dist
 
         neighbors = [
             (r - 1, c),
@@ -57,7 +56,16 @@ def shortest(start, end):
 
             heapq.heappush(heap, (dist + 1, (nr, nc)))
 
-    return None
+    return distances_map
+
+dist_map = shortest_from(start)
+
+def shortest(start, end):
+    if dist_map.get(start) is None:
+        return None
+    if dist_map.get(end) is None:
+        return None
+    return dist_map[end] - dist_map[start]
 
 
 sd = shortest(start, end)
@@ -67,7 +75,7 @@ print(sd)
 max_cheat_distance = 20
 count = 0
 for cheat_start_row in range(rows):
-    print('cheat start row: %d (cur count %d)' % (cheat_start_row, count))
+    # print('cheat start row: %d (cur count %d)' % (cheat_start_row, count))
     for cheat_start_col in range(cols):
         if field[cheat_start_row][cheat_start_col] == '#':
             continue
@@ -99,3 +107,4 @@ for cheat_start_row in range(rows):
                     # print('cheat %r -> %r saves %d' % (cheat_start, cheat_end, sd - path_with_cheat_dist))
                     count += 1
 print(count)
+print('elapsed time: %0.3f sec' % (time.time() - started_at))
