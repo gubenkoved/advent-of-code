@@ -79,8 +79,8 @@ def encodings(keypad, code, position):
             yield (path + 'A',)
 
 
-def complexity(code, encoded):
-    return len(encoded) * int(code[:3])
+def complexity(code, encoded_len):
+    return encoded_len * int(code[:3])
 
 
 # returns possible paths on the first (L1) keypad for a given code
@@ -88,50 +88,41 @@ def l1_encodings(code):
     return list(encodings(keypad1, code, keypad1_start))
 
 
-# example: ^^>A
+# example: ^^>A -> best len on given encoding level
 @functools.lru_cache(maxsize=None)
-def encode(atom, level) -> tuple[str, ...]:
+def encode(atom, level) -> int:
     assert atom[-1] == 'A'
     if level == 0:
-        return (atom, )
-    best = None
+        return len(atom)
     best_len = float('inf')
     for inner in encodings(keypad2, atom, keypad2_start):
-        inner_result = []
-        inner_result_total_len = 0
+        inner_total_len = 0
         for inner_atom in inner:
-            encoded = encode(inner_atom, level - 1)
-            inner_result.extend(encoded)
-            inner_result_total_len += sum(len(x) for x in encoded)
-        if best is None or inner_result_total_len < best_len:
-            best = inner_result
-            best_len = inner_result_total_len
-    return tuple(best)
+            inner_total_len += encode(inner_atom, level - 1)
+        if inner_total_len < best_len:
+            best_len = inner_total_len
+    return best_len
 
 
-# returns best overall encoding
-def solve2(atoms):
-    result = []
-    for atom in atoms:
-        encoded = encode(atom, 17 + 1)
-        result.extend(encoded)
-    return ''.join(result)
+def solve2(atoms) -> int:
+    return sum(
+        encode(atom, 25)
+        for atom in atoms
+    )
 
 
-def solve(code) -> str:
-    best = None
-    for atoms in l1_encodings(code):
-        encoded = solve2(atoms)
-        if best is None or len(encoded) < len(best):
-            best = encoded
-    return best
+def solve(code) -> int:
+    return min(
+        solve2(atoms)
+        for atoms in l1_encodings(code)
+    )
 
 
 result = 0
 for code in codes:
     print('handling code:', code)
-    encoded = solve(code)
-    c = complexity(code, encoded)
-    print('  encoded len: %d, complexity: %d' % (len(encoded), c))
+    encoded_len = solve(code)
+    c = complexity(code, encoded_len)
+    print('  encoded len: %d, complexity: %d' % (encoded_len, c))
     result += c
 print(result)
