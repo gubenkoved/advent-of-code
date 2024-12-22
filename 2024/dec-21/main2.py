@@ -1,8 +1,5 @@
 import functools
-import sys
-from pprint import pprint
 
-sys.setrecursionlimit(10**9)
 
 file = open('data.txt', 'r')
 
@@ -65,8 +62,11 @@ def paths(keypad, start, end):
             yield nd + inner
 
 
-# returns ALL encoding of a given code on a given keypad
-def encodings(keypad, code, position):
+# returns ALL encodings of a given code on a given keypad as tuple of atoms
+# where atom is an "arrow path" starting at some position which ends with "A" to
+# finally enter the character on a keypad;
+# note that amount of atoms will be equal to the len of the code (by definition);
+def encodings(keypad, code, position) -> tuple[str, ...]:
     assert code, 'no code'
     next_chr = code[0]
     next_pos = position_of(keypad, next_chr)
@@ -88,25 +88,24 @@ def l1_encodings(code):
     return list(encodings(keypad1, code, keypad1_start))
 
 
-# example: ^^>A -> best len on given encoding level
+# bel stands for "best encoded len"
 @functools.lru_cache(maxsize=None)
-def encode(atom, level) -> int:
+def bel(atom: str, level: int) -> int:
     assert atom[-1] == 'A'
     if level == 0:
         return len(atom)
     best_len = float('inf')
-    for inner in encodings(keypad2, atom, keypad2_start):
-        inner_total_len = 0
-        for inner_atom in inner:
-            inner_total_len += encode(inner_atom, level - 1)
-        if inner_total_len < best_len:
-            best_len = inner_total_len
+    for inner_atoms in encodings(keypad2, atom, keypad2_start):
+        best_len = min(best_len, sum(
+            bel(inner_atom, level - 1)
+            for inner_atom in inner_atoms
+        ))
     return best_len
 
 
 def solve2(atoms) -> int:
     return sum(
-        encode(atom, 25)
+        bel(atom, 25)
         for atom in atoms
     )
 
@@ -118,11 +117,22 @@ def solve(code) -> int:
     )
 
 
+# show all possible atoms
+# possible_atoms = set()
+# for c1 in '<^>vA':
+#     for c2 in '<^>vA':
+#         if c1 == c2:
+#             continue
+#         for atom in paths2(keypad2, position_of(keypad2, c1), position_of(keypad2, c2)):
+#             possible_atoms.add(atom)
+# print('all possible atoms: %s (%d)' % (possible_atoms, len(possible_atoms)))
+
+
 result = 0
 for code in codes:
     print('handling code:', code)
     encoded_len = solve(code)
     c = complexity(code, encoded_len)
-    print('  encoded len: %d, complexity: %d' % (encoded_len, c))
+    print('  best encoded len: %d, complexity: %d' % (encoded_len, c))
     result += c
 print(result)
