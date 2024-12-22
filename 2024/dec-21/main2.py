@@ -1,7 +1,5 @@
-import math
 import functools
 import sys
-import heapq
 from pprint import pprint
 
 sys.setrecursionlimit(10**9)
@@ -69,18 +67,71 @@ def paths(keypad, start, end):
 
 # returns ALL encoding of a given code on a given keypad
 def encodings(keypad, code, position):
-    if not code:
-        yield ''
-        return
-
+    assert code, 'no code'
     next_chr = code[0]
     next_pos = position_of(keypad, next_chr)
 
     for path in paths2(keypad, position, next_pos):
-        for inner in encodings(keypad, code[1:], next_pos):
-            yield path + 'A' + inner
+        if len(code) > 1:
+            for inner in encodings(keypad, code[1:], next_pos):
+                yield (path + 'A',) + inner
+        else:
+            yield (path + 'A',)
 
 
 def complexity(code, encoded):
     return len(encoded) * int(code[:3])
 
+
+# returns possible paths on the first (L1) keypad for a given code
+def l1_encodings(code):
+    return list(encodings(keypad1, code, keypad1_start))
+
+
+# example: ^^>A
+@functools.lru_cache(maxsize=None)
+def encode(atom, level) -> tuple[str, ...]:
+    assert atom[-1] == 'A'
+    if level == 0:
+        return (atom, )
+    best = None
+    best_len = float('inf')
+    for inner in encodings(keypad2, atom, keypad2_start):
+        inner_result = []
+        inner_result_total_len = 0
+        for inner_atom in inner:
+            encoded = encode(inner_atom, level - 1)
+            inner_result.extend(encoded)
+            inner_result_total_len += sum(len(x) for x in encoded)
+        if best is None or inner_result_total_len < best_len:
+            best = inner_result
+            best_len = inner_result_total_len
+    return tuple(best)
+
+
+# returns best overall encoding
+def solve2(atoms):
+    result = []
+    for atom in atoms:
+        encoded = encode(atom, 17 + 1)
+        result.extend(encoded)
+    return ''.join(result)
+
+
+def solve(code) -> str:
+    best = None
+    for atoms in l1_encodings(code):
+        encoded = solve2(atoms)
+        if best is None or len(encoded) < len(best):
+            best = encoded
+    return best
+
+
+result = 0
+for code in codes:
+    print('handling code:', code)
+    encoded = solve(code)
+    c = complexity(code, encoded)
+    print('  encoded len: %d, complexity: %d' % (len(encoded), c))
+    result += c
+print(result)
