@@ -25,16 +25,6 @@ def traverse(node):
     return walked
 
 
-connected_components = []
-visited = set()
-
-for node in adjacency:
-    if node not in visited:
-        component = traverse(node)
-        visited.update(component)
-        connected_components.append(component)
-
-
 duplicates = set()
 count = 0
 for c in adjacency:
