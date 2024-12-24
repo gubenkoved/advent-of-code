@@ -215,12 +215,65 @@ def visualize():
             'source': b,
             'target': r,
         })
+    visualize_impl(nodes, links, 'graph.html')
+
+
+def visualize2():
+    nodes = {}
+    links = []
+
+    color_map = {
+        'AND': 'red',
+        'OR': 'green',
+        'XOR': 'blue',
+    }
+    for a, op, b, r in gates:
+        if a not in nodes:
+            nodes[a] = {
+                'id': a,
+                'label': a,
+                'color': 'black',
+            }
+        if b not in nodes:
+            nodes[b] = {
+                'id': b,
+                'label': b,
+                'color': 'black',
+            }
+        nodes[r] = {
+            'id': r,
+            'label': r,
+            'color': 'black',
+        }
+        op_id = '%s-%s-%s' % (a, op, b)
+        nodes[op_id] = {
+            'id': op_id,
+            'label': op,
+            'color': color_map[op],
+        }
+        links.append({
+            'source': a,
+            'target': op_id,
+        })
+        links.append({
+            'source': b,
+            'target': op_id,
+        })
+        # labeling link
+        links.append({
+            'source': op_id,
+            'target': r,
+            'dashed': True,
+        })
+    visualize_impl(nodes, links, 'graph2.html')
+
+
+def visualize_impl(nodes, links, path):
     data = {
         'nodes': list(nodes.values()),
         'links': links,
     }
-
-    with open('graph.html', 'w') as f:
+    with open(path, 'w') as f:
         graph_json = json.dumps(data)
         f.write(
             """
@@ -240,15 +293,19 @@ def visualize():
                         // .nodeCanvasObjectMode(() => 'after')
                         .linkDirectionalArrowLength(8)
                         .nodeVal(1)
+                        .linkLineDash(link => link.dashed && [4, 4])
                         .nodeCanvasObject((node, ctx, globalScale) => {
                           const label = node.label;
                           const fontSize = 14 / globalScale;
                           ctx.font = `${fontSize}px Sans-Serif`;
                           const textWidth = ctx.measureText(label).width;
-                          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
+                          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.4);
         
-                          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                           ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
+                          ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                          ctx.lineWidth = 1 / globalScale;
+                          ctx.strokeRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
         
                           ctx.textAlign = 'center';
                           ctx.textBaseline = 'middle';
@@ -279,6 +336,7 @@ def visualize():
 # (bng, fjp)
 # bfq,bng,fjp,hkh,hmt,z18,z27,z31
 visualize()
+visualize2()
 
 simulator = Simulator(gates)
 
@@ -331,8 +389,8 @@ def fix(swaps, max_swaps, max_dist):
 
 
 # FIXME: still too long...
-print('fixing...')
-fix([], max_swaps=4, max_dist=10)
+# print('fixing...')
+# fix([], max_swaps=4, max_dist=10)
 
 # TODO: use pattern to check all summators except first two and the last one
 # XOR Z_n
