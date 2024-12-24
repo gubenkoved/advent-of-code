@@ -220,7 +220,7 @@ def visualize():
             'source': b,
             'target': r,
         })
-    visualize_impl(nodes, links, 'graph.html')
+    graph_to_html(nodes, links, 'graph.html')
 
 
 def visualize2():
@@ -270,10 +270,10 @@ def visualize2():
             'target': r,
             'dashed': True,
         })
-    visualize_impl(nodes, links, 'graph2.html')
+    graph_to_html(nodes, links, 'graph2.html')
 
 
-def visualize_impl(nodes, links, path):
+def graph_to_html(nodes, links, path):
     data = {
         'nodes': list(nodes.values()),
         'links': links,
@@ -346,8 +346,8 @@ visualize2()
 simulator = Simulator(gates)
 
 print('initially circuit is not good, see: ')
-assert simulator.is_correct() == False
-assert simulator.has_cycles() == False
+assert simulator.is_correct2() == False, 'should not be correct at the start'
+assert simulator.has_cycles() == False, 'should not have cycles at the start'
 
 dist_map = simulator.distances_from('z45', use_out=True)
 
@@ -359,7 +359,7 @@ for a, op, b, r in gates:
 
 print('\n***\n')
 for idx in range(45 + 1):
-    gate = 'z%02d' % idx
+    gate = gn('z', idx)
     # show up to 3 levels of the inputs
     dist_map = simulator.distances_from(gate, use_out=True)
     for d in range(3 + 1):
@@ -386,9 +386,11 @@ n = len(gates)
 
 
 def is_good_summator(idx):
-    assert idx >= 1 and idx <=44
+    assert idx >= 0 and idx <= 45
+
+    # initialize is inputs
     values_map = {}
-    for idx2 in range(idx + 1):
+    for idx2 in range(45):
         values_map[gn('x', idx2)] = 0
         values_map[gn('y', idx2)] = 0
 
@@ -397,6 +399,13 @@ def is_good_summator(idx):
         for prev_y in bits:
             for x in bits:
                 for y in bits:
+                    # not possible to set prev bits for the very first summator
+                    if idx == 0 and (prev_x or prev_y):
+                        continue
+                    # last summator
+                    if idx == 45 and (x or y):
+                        continue
+
                     values_map[gn('x', idx - 1)] = prev_x
                     values_map[gn('y', idx - 1)] = prev_y
                     values_map[gn('x', idx)] = x
@@ -407,15 +416,70 @@ def is_good_summator(idx):
                     out_map = simulator.sim(values_map, needed=[out_name])
                     actual_z = out_map[out_name]
                     if expected_z != actual_z:
-                        print(
-                            '  WA at %r prev bits, %r cur, result was %r' % (
-                            (prev_x, prev_y), (x, y), actual_z)
-                        )
+                        # print(
+                        #     '  WA at %r prev bits, %r cur, result was %r' % (
+                        #     (prev_x, prev_y), (x, y), actual_z)
+                        # )
                         return False
 
     return True
 
 
-for idx in range(1, 45):
-    if not is_good_summator(idx):
-        print('summator %d does not work!' % idx)
+def is_working_till(summator_idx):
+    for idx in range(0, summator_idx + 1):
+        if not is_good_summator(idx):
+            return False
+    return True
+
+
+def gates_nearby(target, distance):
+    result = []
+    dist_map = simulator.distances_from(target, use_out=True)
+    for name in dist_map:
+        if name not in simulator.gate_types:
+            continue
+        if dist_map.get(name) > distance:
+            continue
+        result.append(name)
+    return result
+
+
+def find_fixes(summator_idx):
+    fixes = []
+    target_gate = gn('z', summator_idx)
+    nearby = gates_nearby(target_gate, 10)
+    for g1_idx in range(len(nearby)):
+        for g2_idx in range(g1_idx + 1, len(nearby)):
+            g1, g2 = nearby[g1_idx], nearby[g2_idx]
+            simulator.swap(g1, g2)
+            # ok = not simulator.has_cycles() and is_working_till(summator_idx)
+            ok = not simulator.has_cycles() and is_good_summator(summator_idx)
+            if ok:
+                # print(' CAN SWAP %s and %s!' % (g1, g2))
+                fixes.append((g1, g2))
+            simulator.swap(g1, g2)
+    return fixes
+
+
+def solve(idx, applied_fixes):
+    if idx >= 46:
+        print('looks like all is solved!')
+        print('fixes applied: %r' % applied_fixes)
+        # stop all the way
+        return True
+    print('%ssolve(%d, %r)' % ('  ' * len(applied_fixes), idx, applied_fixes))
+
+    if is_good_summator(idx):
+        # just go ahead...
+        return solve(idx + 1, applied_fixes)
+
+    # print('summator %d does not work!' % idx)
+    fixes = find_fixes(idx)
+    for fix in fixes:
+        simulator.swap(fix[0], fix[1])
+        stop = solve(idx + 1, applied_fixes + [fix])
+        if stop:
+            return stop
+        simulator.swap(fix[1], fix[0])
+
+solve(0, [])
