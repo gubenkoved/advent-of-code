@@ -33,6 +33,11 @@ while True:
     ])
 
 
+# gate name
+def gn(prefix, idx):
+    return '%s%02d' % (prefix, idx)
+
+
 class Simulator:
     def __init__(self, gates):
         # name -> operation
@@ -99,14 +104,14 @@ class Simulator:
                 continue
             visited.add(cur)
             dist_map[cur] = dist
-            adjacent = self.in_map.get(cur, [])
+            adjacent = list(self.in_map.get(cur, []))
             if use_out:
                 adjacent += self.out_map.get(cur, [])
             for name in adjacent:
                 queue.append((name, dist + 1))
         return dist_map
 
-    def sim(self, value_map):
+    def sim(self, value_map, needed = None):
         @functools.cache
         def value_of(name):
             if name in value_map:
@@ -131,28 +136,28 @@ class Simulator:
             return result
 
         result_map = {}
-        for gate, op in self.gate_types.items():
-            result_map[gate] = value_of(gate)
+        for name in (needed or self.gate_types):
+            result_map[name] = value_of(name)
         return result_map
 
-    def set_inout_register(self, reg_map, number, prefix):
+    def set_input_register(self, reg_map, number, prefix):
         for idx in range(45):
-            reg_map['%s%02d' % (prefix, idx)] = number % 2
+            reg_map[gn(prefix, idx)] = number % 2
             number //= 2
 
-    def get_output(self, values_map):
+    def get_output_register(self, values_map):
         result = 0
         for idx in range(46):
-            if values_map['z%02d' % idx]:
+            if values_map[gn('z', idx)]:
                 result |= 1 << idx
         return result
 
     def sim2(self, x, y):
         reg_map = {}
-        self.set_inout_register(reg_map, x, 'x')
-        self.set_inout_register(reg_map, y, 'y')
+        self.set_input_register(reg_map, x, 'x')
+        self.set_input_register(reg_map, y, 'y')
         result_map = self.sim(reg_map)
-        return self.get_output(result_map)
+        return self.get_output_register(result_map)
 
     def is_correct2(self):
         # try setting par of bits at all possible places
@@ -366,33 +371,7 @@ for idx in range(45 + 1):
 
 n = len(gates)
 
-# try fixing with very limited the max "distance" between error gates
-def fix(swaps, max_swaps, max_dist):
-    if len(swaps) == max_swaps:
-        print('checking for swaps: %s' % swaps)
-        if simulator.has_cycles():
-            print('  cycles detected')
-        else:
-            if simulator.is_correct():
-                print('fixed! swaps: %s' % swaps)
-                exit(0)
-    else:  # recursion step
-        start_idx = 0 if not swaps else swaps[-1][1] + 1
-        for idx1 in range(start_idx, n):
-            for idx2 in range(idx1 + 1, n):
-                if idx2 - idx1 > max_dist:
-                    continue
-                g1, g2 = gates[idx1], gates[idx2]
-                simulator.swap(g1[-1], g2[-1])
-                fix(swaps + [(idx1, idx2)], max_swaps, max_dist)
-                simulator.swap(g1[-1], g2[-1])
-
-
-# FIXME: still too long...
-# print('fixing...')
-# fix([], max_swaps=4, max_dist=10)
-
-# TODO: use pattern to check all summators except first two and the last one
+# here is how good summator (except first two and the last one look like)
 # XOR Z_n
 #     OR # carryover
 #         AND
@@ -404,3 +383,39 @@ def fix(swaps, max_swaps, max_dist):
 #     XOR
 #         X_n
 #         Y_n
+
+
+def is_good_summator(idx):
+    assert idx >= 1 and idx <=44
+    values_map = {}
+    for idx2 in range(idx + 1):
+        values_map[gn('x', idx2)] = 0
+        values_map[gn('y', idx2)] = 0
+
+    bits = [0, 1]
+    for prev_x in bits:
+        for prev_y in bits:
+            for x in bits:
+                for y in bits:
+                    values_map[gn('x', idx - 1)] = prev_x
+                    values_map[gn('y', idx - 1)] = prev_y
+                    values_map[gn('x', idx)] = x
+                    values_map[gn('y', idx)] = y
+
+                    expected_z = ((prev_x + prev_y + (x << 1) + (y << 1)) >> 1) & 1
+                    out_name = gn('z', idx)
+                    out_map = simulator.sim(values_map, needed=[out_name])
+                    actual_z = out_map[out_name]
+                    if expected_z != actual_z:
+                        print(
+                            '  WA at %r prev bits, %r cur, result was %r' % (
+                            (prev_x, prev_y), (x, y), actual_z)
+                        )
+                        return False
+
+    return True
+
+
+for idx in range(1, 45):
+    if not is_good_summator(idx):
+        print('summator %d does not work!' % idx)
