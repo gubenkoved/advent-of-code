@@ -36,9 +36,11 @@ while idx < len(lines):
             idx += 1
 
 
-size_at_most_threshold = 0
+def dir_size(dir_path):
+    return sum(v for k, v in files.items() if k.startswith(dir_path))
 
-def traverse(dir_path):
+
+def iter_dirs(dir_path):
     global size_at_most_threshold
     assert dir_path not in files
 
@@ -51,18 +53,14 @@ def traverse(dir_path):
             subdirs.add(path[:next_sep_idx])
 
     for subdir in subdirs:
-        traverse(subdir)
+        yield from iter_dirs(subdir)
 
-    size = sum(v for k, v in files.items() if k.startswith(dir_path))
-
-    print('dir "%s" total size %d' % (dir_path, size))
-
-    if size <= 100000:
-        size_at_most_threshold += size
-        print(' ** below threshold!')
-
-    return size
+    yield dir_path, dir_size(dir_path)
 
 
-traverse('/')
-print(size_at_most_threshold)
+result = 0
+for dir_path, size in iter_dirs('/'):
+    if size < 100000:
+        result += size
+print(result)
+

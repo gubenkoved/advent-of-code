@@ -36,10 +36,12 @@ while idx < len(lines):
             idx += 1
 
 
-result = None
+def dir_size(dir_path):
+    return sum(v for k, v in files.items() if k.startswith(dir_path))
 
-def traverse(dir_path, threshold):
-    global result
+
+def iter_dirs(dir_path):
+    global size_at_most_threshold
     assert dir_path not in files
 
     subdirs = set()
@@ -51,25 +53,19 @@ def traverse(dir_path, threshold):
             subdirs.add(path[:next_sep_idx])
 
     for subdir in subdirs:
-        traverse(subdir, threshold)
+        yield from iter_dirs(subdir)
 
-    size = sum(v for k, v in files.items() if k.startswith(dir_path))
-
-    print('dir "%s" total size %d' % (dir_path, size))
-
-    if threshold and size >= threshold:
-        if result is None or size < result:
-            print('** new best option: "%s" of size %d' % (dir_path, threshold))
-            result = size
-
-    return size
+    yield dir_path, dir_size(dir_path)
 
 
-used = traverse('/', None)
+used = dir_size('/')
 free = 70000000 - used
 required = 30000000 - free
 
 # find the directory which is smallest of ones bigger than or equal to required size
-traverse('/', required)
+result = float('inf')
+for dir_path, size in iter_dirs('/'):
+    if size >= required:
+        result = min(result, size)
 print('required: %d' % required)
 print(result)
