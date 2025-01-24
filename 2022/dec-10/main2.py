@@ -28,13 +28,12 @@ for operation in operations:
 for idx in range(len(values)):
     print('#%d: %d' % (idx, values[idx]))
 
-for cycle in range(1, 240 + 1):
+for cycle in range(0, 240):
     x = values[cycle]
-    crt_x = 1 + (cycle - 1) % 40
+    crt_x = cycle % 40
     is_lit = abs(crt_x - x) <= 1
     print('#' if is_lit else '.', end='')
-    if cycle % 40 == 0:
+    if (cycle + 1) % 40 == 0:
         print()
 
 # answer is EGJBGCFK
-# for some reason first column appears to be broken...
