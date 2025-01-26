@@ -20,14 +20,14 @@ end = None
 # start with marking all "a" nodes as possible start locations
 for row in range(rows):
     for col in range(cols):
-        if field[row][col] in ('S', 'a'):
+        if field[row][col] == 'S':
             heapq.heappush(heap, (0, (row, col)))
             field[row][col] = 'a'
         elif field[row][col] == 'E':
             field[row][col] = 'z'
             end = (row, col)
 
-assert len(heap) > 1
+assert len(heap) == 1
 assert end is not None
 
 while heap:
