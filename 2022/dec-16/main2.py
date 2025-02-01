@@ -67,12 +67,15 @@ def st(iterable):
     return tuple(sorted(iterable))
 
 
+EXHAUSTED = ('NONE', -2)
+
+
 @functools.cache
 def maximize(
         time_left: int,
         actor1: tuple[str, int],
         actor2: tuple[str, int],
-        opened: tuple,
+        flow_rate: int,
         targets: tuple,
 ):
     if time_left == 0:
@@ -100,7 +103,7 @@ def maximize(
                     time_left,
                     (t, distance(actor1_valve, t)),
                     actor2,
-                    st(opened + (actor1_valve,)),
+                    flow_rate + valves[actor1_valve][0],
                     st(set(targets) - {t}),
                 )
             )
@@ -108,9 +111,9 @@ def maximize(
             options.append(
                 maximize(
                     time_left,
-                    ('NONE', -2),
+                    EXHAUSTED,
                     actor2,
-                    st(opened + (actor1_valve,)),
+                    flow_rate + valves[actor1_valve][0],
                     tuple(),
                 )
             )
@@ -122,7 +125,7 @@ def maximize(
                     time_left,
                     actor1,
                     (t, distance(actor2_valve, t)),
-                    st(opened + (actor2_valve,)),
+                    flow_rate + valves[actor2_valve][0],
                     st(set(targets) - {t}),
                 )
             )
@@ -131,21 +134,20 @@ def maximize(
                 maximize(
                     time_left,
                     actor1,
-                    ('NONE', -2),
-                    st(opened + (actor2_valve,)),
+                    EXHAUSTED,
+                    flow_rate + valves[actor2_valve][0],
                     tuple(),
                 )
             )
 
     # tick passing
     if not options:
-        cur_flow_rate = sum(valves[valve][0] for valve in opened)
         options.append(
-            cur_flow_rate + maximize(
+            flow_rate + maximize(
                 time_left - 1,
-                (actor1_valve, actor1_ttt - 1),
-                (actor2_valve, actor2_ttt - 1),
-                opened,
+                (actor1_valve, actor1_ttt - 1) if actor1 != EXHAUSTED else EXHAUSTED,
+                (actor2_valve, actor2_ttt - 1) if actor2 != EXHAUSTED else EXHAUSTED,
+                flow_rate,
                 targets,
             )
         )
@@ -163,6 +165,6 @@ for idx1 in range(len(targets) - 1):
             26,
             (targets[idx1], distance('AA', targets[idx1])),
             (targets[idx2], distance('AA', targets[idx2])),
-            tuple(),
+            0,
             st(set(targets) - {targets[idx1], targets[idx2]})))
 print(best)
