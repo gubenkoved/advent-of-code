@@ -107,31 +107,74 @@ arrows_to_direction = {
     '>': (0, +1),
 }
 
-arrow_idx = 0
 
-for rock_idx in range(2022):
-    rock, rock_pos = new_rock(rock_idx % len(rocks))
+def simulate(rock_count):
+    print('simulate %d rocks' % rock_count)
+    global chamber
+    global highest_rock_row
 
-    rock_stuck = False
-    while True:
-        arrow = arrows[arrow_idx % len(arrows)]
-        arrow_idx += 1
-        rock_pos = move(rock, rock_pos, arrows_to_direction[arrow])
+    # reset the state
+    chamber = []
+    highest_rock_row = -1
 
-        # try fall down
-        new_rock_pos = move(rock, rock_pos, (-1, 0))
-        rock_stuck = rock_pos == new_rock_pos
-        rock_pos = new_rock_pos
+    # (rock_num, arrow_num) -> (rock_idx, height)
+    results = {}
 
-        if rock_stuck:
-            print('rock %d stuck' % rock_idx)
-            break
+    period, height_increment_per_period = None, None
 
-    # carry over rock to the chamber
-    put_rock(rock, rock_pos)
+    arrow_idx = 0
+    for rock_idx in range(rock_count):
+        rock_num = rock_idx % len(rocks)
+        rock, rock_pos = new_rock(rock_num)
 
-    highest_rock_row = max(highest_rock_row, rock_pos[0])
+        rock_stuck = False
+        while True:
+            arrow = arrows[arrow_idx % len(arrows)]
+            arrow_idx += 1
+            rock_pos = move(rock, rock_pos, arrows_to_direction[arrow])
 
+            # try fall down
+            new_rock_pos = move(rock, rock_pos, (-1, 0))
+            rock_stuck = rock_pos == new_rock_pos
+            rock_pos = new_rock_pos
 
-print_chamber()
-print('highest rock: %d' % (highest_rock_row + 1))
+            if rock_stuck:
+                # print('rock %d stuck' % rock_idx)
+                break
+
+        # carry over rock to the chamber
+        put_rock(rock, rock_pos)
+
+        highest_rock_row = max(highest_rock_row, rock_pos[0])
+
+        result_key = (rock_num, arrow_idx % len(arrows))
+        if result_key in results:
+            p_rock_idx, p_height = results[result_key]
+            # print('previously when %d rocks fell height was %d (currently %d fell, rock num is %d, arrow num is %d), seems period is %s, height increment is %d' % (
+            #     p_rock_idx, p_height, rock_idx, rock_num, arrow_idx % len(arrows), rock_idx - p_rock_idx, highest_rock_row - p_height,
+            # ))
+            period = rock_idx - p_rock_idx
+            height_increment_per_period = highest_rock_row - p_height
+        results[result_key] = (rock_idx, highest_rock_row)
+
+    print('  highest rock: %d' % (highest_rock_row + 1))
+    print('  detected period is %d inc per %d rocks' % (height_increment_per_period, period))
+
+    return highest_rock_row, period, height_increment_per_period
+
+# detect the period
+_, period, h_inc = simulate(10000)
+
+# now we need to simulate 1000000000000, but we already know the period
+target_count = 1000000000000
+skip_rounds = (target_count // period) - 1  # arbitrary really how many rounds we will simulate
+
+print('skipping %d rounds of %d rocks in each' % (skip_rounds, period))
+
+# reduce target leaving only a handful of rocks to simulate and then we just add the
+# periodic middle
+
+target_count -= skip_rounds * period
+height, _, _ = simulate(target_count)
+
+print(height + skip_rounds * h_inc + 1)
