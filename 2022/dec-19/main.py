@@ -29,8 +29,18 @@ with open('data.txt', 'r') as file:
 # search in the phase space via dynamic programming
 @functools.cache
 def max_geodes(bp, time, ore, clay, obsidian, geodes, ore_robots, clay_robots, obsidian_robots, geode_robots) -> int:
+    # print('f%s' % ((time, ore, clay, obsidian, geodes, ore_robots, clay_robots, obsidian_robots, geode_robots), ))
+
     if time == 0:
         return geode_robots
+
+    # assert ore >= 0
+    # assert clay >= 0
+    # assert obsidian >= 0
+    # assert ore_robots >= 0
+    # assert clay_robots >= 0
+    # assert obsidian_robots >= 0
+    # assert geode_robots >= 0
 
     options = []
 
@@ -96,7 +106,7 @@ def max_geodes(bp, time, ore, clay, obsidian, geodes, ore_robots, clay_robots, o
         ))
 
     # geode robot
-    if ore >= bp[4] and clay >= bp[5]:
+    if ore >= bp[4] and obsidian >= bp[5]:
         options.append(max_geodes(
             bp,
             time - 1,
