@@ -28,11 +28,16 @@ with open('data.txt', 'r') as file:
 
 # search in the phase space via dynamic programming
 @functools.cache
-def max_geodes(bp, time, ore, clay, obsidian, geodes, ore_robots, clay_robots, obsidian_robots, geode_robots) -> int:
+def max_geodes(
+        bp, time,
+        ore, clay, obsidian, geodes,
+        ore_robots, clay_robots, obsidian_robots, geode_robots,
+        ore_robots_needed,
+) -> int:
     # print('f%s' % ((time, ore, clay, obsidian, geodes, ore_robots, clay_robots, obsidian_robots, geode_robots), ))
 
     if time == 0:
-        return geode_robots
+        return geodes
 
     # assert ore >= 0
     # assert clay >= 0
@@ -42,95 +47,131 @@ def max_geodes(bp, time, ore, clay, obsidian, geodes, ore_robots, clay_robots, o
     # assert obsidian_robots >= 0
     # assert geode_robots >= 0
 
-    options = []
+    # here is the key how to limit search space:
+    # first let's assume we need some amount of ore robots (we can enumerate all
+    # possible values), then first part of our strategy would be building that
+    # amount of ore robots as soon as possible, and only then we would run full
+    # search trying all different options;
+    # this limits search space enough to calculate the solution timely
 
-    # just time passing by option
-    options.append(max_geodes(
-        bp,
-        time - 1,
-        ore + ore_robots,
-        clay + clay_robots,
-        obsidian + obsidian_robots,
-        geodes + geode_robots,
-        ore_robots,
-        clay_robots,
-        obsidian_robots,
-        geode_robots,
-    ))
+    if ore_robots < ore_robots_needed:
+        if ore >= bp[0]:
+            return max_geodes(
+                bp,
+                time - 1,
+                ore + ore_robots - bp[0],
+                clay + clay_robots,
+                obsidian + obsidian_robots,
+                geodes + geode_robots,
+                ore_robots + 1,
+                clay_robots,
+                obsidian_robots,
+                geode_robots,
+                ore_robots_needed,
+            )
+        else:
+            return max_geodes(
+                bp,
+                time - 1,
+                ore + ore_robots,
+                clay + clay_robots,
+                obsidian + obsidian_robots,
+                geodes + geode_robots,
+                ore_robots,
+                clay_robots,
+                obsidian_robots,
+                geode_robots,
+                ore_robots_needed,
+            )
+    else:
+        options = []
 
-    # options with building new robots if we can
-
-    # ore robot
-    if ore >= bp[0]:
+        # just time passing by option
         options.append(max_geodes(
             bp,
             time - 1,
-            ore + ore_robots - bp[0],
-            clay + clay_robots,
-            obsidian + obsidian_robots,
-            geodes + geode_robots,
-            ore_robots + 1,
-            clay_robots,
-            obsidian_robots,
-            geode_robots,
-        ))
-
-    # clay robot
-    if ore >= bp[1]:
-        options.append(max_geodes(
-            bp,
-            time - 1,
-            ore + ore_robots - bp[1],
+            ore + ore_robots,
             clay + clay_robots,
             obsidian + obsidian_robots,
             geodes + geode_robots,
             ore_robots,
-            clay_robots + 1,
-            obsidian_robots,
-            geode_robots,
-        ))
-
-    # obsidian robot
-    if ore >= bp[2] and clay >= bp[3]:
-        options.append(max_geodes(
-            bp,
-            time - 1,
-            ore + ore_robots - bp[2],
-            clay + clay_robots - bp[3],
-            obsidian + obsidian_robots,
-            geodes + geode_robots,
-            ore_robots,
-            clay_robots,
-            obsidian_robots + 1,
-            geode_robots,
-        ))
-
-    # geode robot
-    if ore >= bp[4] and obsidian >= bp[5]:
-        options.append(max_geodes(
-            bp,
-            time - 1,
-            ore + ore_robots - bp[4],
-            clay + clay_robots,
-            obsidian + obsidian_robots - bp[5],
-            geodes + geode_robots,
-            ore_robots,
             clay_robots,
             obsidian_robots,
-            geode_robots + 1,
+            geode_robots,
+            ore_robots_needed,
         ))
 
-    return max(options)
+        # options with building new robots if we can
+
+        # clay robot
+        if ore >= bp[1]:
+            options.append(max_geodes(
+                bp,
+                time - 1,
+                ore + ore_robots - bp[1],
+                clay + clay_robots,
+                obsidian + obsidian_robots,
+                geodes + geode_robots,
+                ore_robots,
+                clay_robots + 1,
+                obsidian_robots,
+                geode_robots,
+                ore_robots_needed,
+            ))
+
+        # obsidian robot
+        if ore >= bp[2] and clay >= bp[3]:
+            options.append(max_geodes(
+                bp,
+                time - 1,
+                ore + ore_robots - bp[2],
+                clay + clay_robots - bp[3],
+                obsidian + obsidian_robots,
+                geodes + geode_robots,
+                ore_robots,
+                clay_robots,
+                obsidian_robots + 1,
+                geode_robots,
+                ore_robots_needed,
+            ))
+
+        # geode robot
+        if ore >= bp[4] and obsidian >= bp[5]:
+            options.append(max_geodes(
+                bp,
+                time - 1,
+                ore + ore_robots - bp[4],
+                clay + clay_robots,
+                obsidian + obsidian_robots - bp[5],
+                geodes + geode_robots,
+                ore_robots,
+                clay_robots,
+                obsidian_robots,
+                geode_robots + 1,
+                ore_robots_needed,
+            ))
+
+        return max(options)
+
+
+def max_geodes2(bp):
+    result = 0
+    for ore_robots_needed in range(1, 24):
+        max_geodes.cache_clear()
+        result = max(result, max_geodes(
+            bp,
+            24,
+            0, 0, 0, 0,
+            1, 0, 0, 0,
+            ore_robots_needed,
+        ))
+    return result
+
 
 total_quality = 0
 for bp_idx, bp in enumerate(blueprints, start=1):
     print('checking blueprint #%d' % bp_idx)
     max_geodes.cache_clear()
-    total_quality += bp_idx * max_geodes(
-        bp,
-        24,
-        0, 0, 0, 0,
-        1, 0, 0, 0,
-    )
+    total_quality += bp_idx * max_geodes2(bp)
     print('  total quality is %d' % total_quality)
 print(total_quality)
