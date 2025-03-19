@@ -49,6 +49,10 @@ def move(node, delta):
     if delta == 0:
         return
 
+    # take the node out
+    node.prev.next = node.next
+    node.next.prev = node.prev
+
     # find the target left and right pointers between which we need to
     # insert the number
     if delta > 0:
@@ -61,10 +65,6 @@ def move(node, delta):
         for _ in range(abs(delta)):
             right = right.prev
         left = right.prev
-
-    # take the node out
-    node.prev.next = node.next
-    node.next.prev = node.prev
 
     # insert into the new location
     node.next = right
@@ -85,10 +85,11 @@ def print_all(start_node):
     print(nums)
 
 # print initial disposition
-print_all(head)
+# print_all(head)
 
 for node in orig_order:
     move(node, delta=node.value)
+    pass
 
 def find_at(node, delta):
     cur = node
@@ -100,7 +101,7 @@ def find_at(node, delta):
     return cur
 
 
-print_all(zero_node)
+# print_all(zero_node)
 
 print(sum([
     find_at(zero_node, +1000).value,
