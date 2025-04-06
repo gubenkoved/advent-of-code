@@ -1,5 +1,6 @@
 import re
 import functools
+import typing
 
 field = []
 
@@ -19,6 +20,14 @@ with open('data.txt', 'r') as f:
 
     path = f.readline()
 
+
+Point2D = tuple[int, int]
+Vector2D = Point2D
+Point3D = tuple[int, int, int]
+Edge2D = tuple[Point2D, Point2D]
+Edge3D = tuple[Point3D, Point3D]
+
+
 # pos and direction are (row, col)
 pos = None
 direction = (0, +1)
@@ -29,8 +38,17 @@ for col in range(len(field[0])):
         break
 
 
-def add(pos, direction):
+def add(pos: Point2D, direction: Vector2D):
     return pos[0] + direction[0], pos[1] + direction[1]
+
+
+@typing.overload
+def subtract(a: Point2D, b: Vector2D) -> Point2D:
+    ...
+
+
+def subtract(a: Point2D, b: Point2D) -> Vector2D:
+    return a[0] - b[0], a[1] - b[1]
 
 
 def parse_path(path):
@@ -53,10 +71,8 @@ counter_clockwise = {
     (0, -1): (+1, 0),
 }
 
-def opposite(direction):
-    return direction[0] * -1, direction[1] * -1
 
-def is_in_field(pos):
+def is_in_field(pos: Point2D) -> bool:
     row, col = pos
 
     if row < 0 or row >= len(field):
@@ -71,21 +87,12 @@ def is_in_field(pos):
     return True
 
 
-@functools.cache
-def last_cell(pos, direction):
-    while True:
-        new_pos = add(pos, direction)
-        if not is_in_field(new_pos):
-            break
-        pos = new_pos
-    return pos
-
-
 SQUARE_SIZE = 50
 
 
-def to_square_coordinate(row, col):
+def to_square_coordinate(row, col) -> Point2D:
     return row // SQUARE_SIZE, col // SQUARE_SIZE
+
 
 def to_minimap():
     field_rows, field_cols = len(field), len(field[0])
@@ -124,10 +131,42 @@ for row in minimap:
 # the right edge is ((0, 2), (1, 2))
 
 
+def flip(point: Point3D, axis: int) -> Point3D:
+    point = list(point)
+    point[axis] = 1 if point[axis] == 0 else 0
+    return tuple(point)
+
+def find_plane_axis(vertices_3d: list[Point3D]) -> int:
+    """
+    Return axis (index) for which all the coordinates are the same for
+    given points (specified in 2d)
+    """
+    for axis in range(3):
+        if len(set(p[axis] for p in vertices_3d)) == 1:
+            return axis
+    assert False, 'unable to find plane for this points'
+
+def edges_of(pos: Point2D) -> list[Edge2D]:
+    r, c = pos
+    return [
+        ((r, c), (r, c + 1)),
+        ((r, c), (r + 1, c)),
+        ((r, c + 1), (r + 1, c + 1)),
+        ((r + 1, c), (r + 1, c + 1)),
+    ]
+
+def vertices_of_square(pos: Point2D) -> list[Point2D]:
+    r, c = pos
+    return [
+        (r, c),
+        (r, c + 1),
+        (r + 1, c),
+        (r + 1, c + 1),
+    ]
+
+
 # a map from a 2d coordinate on a minimap to the 3d coordinate on the
 # corresponding cube
-
-
 
 def solve_for_3d():
     # find _some_ square we start from, and we will pretend that it lies at
@@ -145,108 +184,82 @@ def solve_for_3d():
 
     assert first_pos is not None
 
-    r, c = first_pos
-
     to_3d_map = {}
+
+    def plane_axis_for_square(pos: Point2D):
+        points_2d = vertices_of_square(pos)
+        points_3d = [to_3d_map[p2d] for p2d in points_2d]
+        return find_plane_axis(points_3d)
+
+    def is_on_minimap(pos: Point2D) -> bool:
+        r, c = pos
+        if r < 0 or r >= len(minimap):
+            return False
+        if c < 0 or c >= len(minimap[r]):
+            return False
+        return True
+
+    r, c = first_pos
 
     to_3d_map[(r, c)] = (0, 0, 0)
     to_3d_map[(r, c + 1)] = (1, 0, 0)
     to_3d_map[(r + 1, c)] = (0, 1, 0)
     to_3d_map[(r + 1, c + 1)] = (1, 1, 0)
 
-    def flip(point, axis):
-        point = list(point)
-        point[axis] = 1 if point[axis] == 0 else 0
-        return tuple(point)
-
-    def find_axis(edge1, edge2):
-        points_2d = edge1 + edge2
-        points_3d = [to_3d_map[p2d] for p2d in points_2d]
-        for axis in range(3):
-            if len(set(p[axis] for p in points_3d)) == 1:
-                return axis
-        assert False, 'bad'
-
-    def gen_all_edges():
-        edges = []
-        for r in range(len(minimap)):
-            for c in range(len(minimap[r])):
-                if minimap[r][c] == 'x':
-                    edges.append(((r, c), (r, c + 1)))
-                    edges.append(((r, c), (r + 1, c)))
-                    edges.append(((r, c + 1), (r + 1, c + 1)))
-                    edges.append(((r + 1, c), (r + 1, c + 1)))
-        return edges
-
-    def edge_on_map(edge):
-        return edge in gen_all_edges()
-
-    def translate_edge(edge, delta):
-        p1, p2 = edge
-        return add(p1, delta), add(p2, delta)
-
-    # FIXME: instead of jumping by edges, jump by squares resolving all
-    #  unresolved edges in each square, trace previous square top level point
-    #  and axis
-
-    r, c = first_pos
-    first_right_edge = (r, c + 1), (r + 1, c + 1)
-    first_down_edge = (r + 1, c), (r + 1, c + 1)
-
-    # (parent_edge, edge, parent_axis) tuples
+    # start with first square, and then traverse to all other ones, every time
+    # resolving the position in 3d space for all the vertices;
+    # on each jump there will be only two unresolved vertices if square was not
+    # yet visited;
     queue = [
-        (first_right_edge, translate_edge(first_right_edge, (0, +1)), 2),
-        (first_down_edge, translate_edge(first_down_edge, (+1, 0)), 2),
+        # square position to handle, parent position
+        (first_pos, None),
     ]
 
-    visited = set([
-        first_right_edge,
-        first_down_edge,
-    ])
+    visited = set()
 
     while queue:
-        parent_edge, edge, parent_axis = queue.pop(0)
+        pos, parent_pos = queue.pop(0)
 
-        if edge in visited:
+        if pos in visited:
             continue
 
-        visited.add(edge)
+        visited.add(pos)
 
-        # solve for current values
-        p1, p2 = edge
-        p1_parent, p2_parent = parent_edge
+        resolved_vertices = []
+        unresolved_vertices = []
+        for vr, vc in vertices_of_square(pos):
+            if (vr, vc) in to_3d_map:
+                resolved_vertices.append((vr, vc))
+            else:
+                unresolved_vertices.append((vr, vc))
 
-        p1_3d = flip(to_3d_map[p1_parent], parent_axis)
-        p2_3d = flip(to_3d_map[p2_parent], parent_axis)
+        if unresolved_vertices:
+            assert len(unresolved_vertices) == 2
+            parent_axis = plane_axis_for_square(parent_pos)
 
-        if p1 in to_3d_map:
-            assert p1_3d == to_3d_map[p1]
+            # copy 3d coordinates from the resolved edge, and flip the coordinate
+            # which was axis plane for the parent square!
+            from_parent_vector = subtract(pos, parent_pos)
+            for to_resolve in unresolved_vertices:
+                source_pos = subtract(to_resolve, from_parent_vector)
+                assert source_pos in to_3d_map
+                to_3d_map[to_resolve] = flip(to_3d_map[source_pos], parent_axis)
 
-        if p2 in to_3d_map:
-            assert p2_3d == to_3d_map[p2]
-
-        to_3d_map[p1] = p1_3d
-        to_3d_map[p2] = p2_3d
-
-        # find axis in which new plane sits
-        axis = find_axis(edge, parent_edge)
-
-        neighbor_edges = [
-            translate_edge(edge, (+1, 0)),  # down
-            translate_edge(edge, (0, -1)),  # left
-            translate_edge(edge, (0, +1)),  # right
-            # there should neven be need to go up consider valid cube representations
-            # but still, for symmetry
-            translate_edge(edge, (-1, 0)),  # up
+        # go to the neighbors
+        r, c = pos
+        neighbors = [
+            (r - 1, c),
+            (r + 1, c),
+            (r, c - 1),
+            (r, c + 1),
         ]
-
-        for neighbor_edge in neighbor_edges:
-            if not edge_on_map(neighbor_edge):
+        for nr, nc in neighbors:
+            if not is_on_minimap((nr, nc)):
                 continue
-
-            queue.append(
-                (edge, neighbor_edge, axis)
-            )
+            if minimap[nr][nc] != 'x':
+                continue
+            npos = (nr, nc)
+            queue.append((npos, pos))
 
     # sanity check
     for x in range(2):
@@ -257,16 +270,66 @@ def solve_for_3d():
     return to_3d_map
 
 
-# TODO: given 3d mapping find the edge we arriving to using the equality of
-#  3d coordinates, there should be exactly one such edge;
-#  then interpolate the position on it using the source position
-#  calculate 2D direction always being from the outside to inside in 2D
+@typing.overload
+def reversed_edge(edge: Edge3D) -> Edge3D:
+    ...
+
+
+def reversed_edge(edge: Edge2D) -> Edge2D:
+    return edge[1], edge[0]
+
+
+def find_corresponding_edge_with_matching_3d(edge: Edge2D) -> Edge2D:
+    target_edge_3d: Edge3D = [minimap_to_3d_map[p] for p in edge]
+
+    for r in range(len(minimap)):
+        for c in range(len(minimap[r])):
+            if minimap[r][c] != 'x':
+                continue
+            for cur_edge in edges_of((r, c)):
+                # skip the original one
+                if cur_edge == edge or cur_edge == reversed_edge(edge):
+                    continue
+                cur_edge_3d = [minimap_to_3d_map[p] for p in cur_edge]
+                if cur_edge_3d == target_edge_3d:
+                    return cur_edge
+                elif cur_edge_3d == reversed_edge(target_edge_3d):
+                    return reversed_edge(cur_edge)
+
+    assert False, 'unable to find'
+
+
+def find_edge_on_minimap(field_position: Point2D, direction: Vector2D) -> Edge2D:
+    r, c = field_position
+    rm, cm = r // SQUARE_SIZE, c // SQUARE_SIZE
+
+    if direction[0] != 0:
+        assert direction[1] == 0
+        # going up/down
+        return (rm, cm), (rm, cm + 1)
+    else:  # going left/right
+        assert direction[0] == 0
+        return (rm, cm), (rm + 1, cm)
+
+
+def interpolate_position(
+        field_pos: Point2D, direction: Vector2D,
+        source_edge_minimap: Edge2D, target_edge_minimap: Edge2D) -> Point2D:
+    pass
+
+
 @functools.cache
-def resolve(pos, direction):
+def resolve(pos: Point2D, direction: Vector2D) -> Point2D:
     next_pos = add(pos, direction)
 
     if not is_in_field(next_pos):
-        next_pos = last_cell(pos, opposite(direction))
+        cur_edge = find_edge_on_minimap(pos, direction)
+        target_edge = find_corresponding_edge_with_matching_3d(cur_edge)
+
+        next_pos = interpolate_position(
+            pos, direction,
+            cur_edge, target_edge
+        )
 
     return next_pos
 
