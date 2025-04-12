@@ -28,6 +28,9 @@ Edge2D = tuple[Point2D, Point2D]
 Edge3D = tuple[Point3D, Point3D]
 
 
+N = SQUARE_SIZE = 50
+
+
 # pos and direction are (row, col)
 pos = None
 direction = (0, +1)
@@ -85,13 +88,6 @@ def is_in_field(pos: Point2D) -> bool:
         return False
 
     return True
-
-
-SQUARE_SIZE = 50
-
-
-def to_square_coordinate(row, col) -> Point2D:
-    return row // SQUARE_SIZE, col // SQUARE_SIZE
 
 
 def to_minimap():
@@ -279,8 +275,13 @@ def reversed_edge(edge: Edge2D) -> Edge2D:
     return edge[1], edge[0]
 
 
+def edge_2d_to_3d(edge: Edge2D) -> Edge3D:
+    p1, p2 = edge
+    return minimap_to_3d_map[p1], minimap_to_3d_map[p2]
+
+
 def find_corresponding_edge_with_matching_3d(edge: Edge2D) -> Edge2D:
-    target_edge_3d: Edge3D = [minimap_to_3d_map[p] for p in edge]
+    target_edge_3d: Edge3D = edge_2d_to_3d(edge)
 
     for r in range(len(minimap)):
         for c in range(len(minimap[r])):
@@ -290,7 +291,7 @@ def find_corresponding_edge_with_matching_3d(edge: Edge2D) -> Edge2D:
                 # skip the original one
                 if cur_edge == edge or cur_edge == reversed_edge(edge):
                     continue
-                cur_edge_3d = [minimap_to_3d_map[p] for p in cur_edge]
+                cur_edge_3d = edge_2d_to_3d(cur_edge)
                 if cur_edge_3d == target_edge_3d:
                     return cur_edge
                 elif cur_edge_3d == reversed_edge(target_edge_3d):
@@ -299,56 +300,194 @@ def find_corresponding_edge_with_matching_3d(edge: Edge2D) -> Edge2D:
     assert False, 'unable to find'
 
 
-def find_edge_on_minimap(field_position: Point2D, direction: Vector2D) -> Edge2D:
-    r, c = field_position
-    rm, cm = r // SQUARE_SIZE, c // SQUARE_SIZE
+@functools.cache
+def is_point_on_line(point: Point2D, start: Point2D, end: Point2D) -> bool:
+    assert start[0] == end[0] or start[1] == end[1]
 
-    if direction[0] != 0:
-        assert direction[1] == 0
-        # going up/down
-        return (rm, cm), (rm, cm + 1)
-    else:  # going left/right
-        assert direction[0] == 0
-        return (rm, cm), (rm + 1, cm)
+    cur = start
+    unit = unit_vec(subtract(end, start))
+    while True:
+        if cur == point:
+            return True
+        if cur == end:
+            break
+        cur = add(cur, unit)
+    return False
+
+
+@functools.cache
+def find_edge_on_minimap(pos: Point2D, direction: Vector2D) -> Edge2D:
+    # note that direction is required otherwise there is uncertainty
+    is_direction_horizontal = direction[0] == 0
+
+    for r in range(len(minimap)):
+        for c in range(len(minimap[r])):
+            if minimap[r][c] != 'x':
+                continue
+
+            if not is_direction_horizontal:
+                # top edge
+                if is_point_on_line(pos, (r * N, c * N), (r * N, (c + 1) * N - 1)):
+                    return (r, c), (r, c + 1)
+
+                # bottom edge
+                if is_point_on_line(pos, ((r + 1) * N - 1, c * N), ((r + 1) * N - 1, (c + 1) * N - 1)):
+                    return (r + 1, c), (r + 1, c + 1)
+
+            if is_direction_horizontal:
+                # left
+                if is_point_on_line(pos, (r * N, c * N), ((r + 1) * N - 1, c * N)):
+                    return (r, c), (r + 1, c)
+
+                # right
+                if is_point_on_line(pos, (r * N, (c + 1) * N - 1), ((r + 1) * N - 1, (c + 1) * N - 1)):
+                    return (r, c + 1), (r + 1, c + 1)
+
+    assert False, 'unable to find'
+
+
+def is_horizontal(edge: Edge2D):
+    p1, p2 = edge
+    if p1[0] == p2[0]:
+        return True
+    elif p1[1] == p2[1]:
+        return False
+    else:
+        assert 'bad'
+
+
+def unit_vec(vector: Vector2D):
+    a, b = vector
+    a = int(a / abs(a)) if a else 0
+    b = int(b / abs(b)) if b else 0
+    return a, b
+
+
+def multiply_vec(vec: Vector2D, k: int) -> Vector2D:
+    return vec[0] * k, vec[1] * k
+
+
+def interpolate(start: Point2D, end: Point2D, offset: int) -> Point2D:
+    unit = unit_vec(subtract(end, start))
+    return add(start, multiply_vec(unit, offset))
+
+
+def edge_to_points(edge: Edge2D) -> (Point2D, Point2D):
+    """
+    Given the edge on the field resolves it into the two positions on the
+    field that both are part of the field. Note how the same edge always have
+    two such possible resolutions (from the two sides of that edge).
+    """
+    p1, p2 = edge
+
+    # wow, it is nasty... is there something better?
+    if is_horizontal(edge):
+        offset = (-1, 0)
+        if p2[1] > p1[1]:
+            p2 = add(p2, (0, -1))
+        else:
+            p1 = add(p1, (0, -1))
+    else:
+        offset = (0, -1)
+        if p2[0] > p1[0]:
+            p2 = add(p2, (-1, 0))
+        else:
+            p1 = add(p1, (-1, 0))
+
+    if is_in_field(p1) and is_in_field(p2):
+        return p1, p2
+    else:
+        p1, p2 = add(p1, offset), add(p2, offset)
+        assert is_in_field(p1)
+        assert is_in_field(p2)
+        return p1, p2
+
+
+def scale_point(point: Point2D, scale: int) -> Point2D:
+    return point[0] * scale, point[1] * scale
+
+
+def scale_edge(edge: Edge2D, factor: int) -> Edge2D:
+    p1, p2 = edge
+    return scale_point(p1, factor), scale_point(p2, factor)
 
 
 def interpolate_position(
         field_pos: Point2D, direction: Vector2D,
-        source_edge_minimap: Edge2D, target_edge_minimap: Edge2D) -> Point2D:
-    pass
+        target_edge_minimap: Edge2D) -> Point2D:
+
+    if direction[0] != 0:
+        # we are going up/down
+        offset = field_pos[1] % SQUARE_SIZE
+    else:
+        assert direction[1] != 0
+        offset = field_pos[0] % SQUARE_SIZE
+
+    target_edge = scale_edge(target_edge_minimap, SQUARE_SIZE)
+    start, end = edge_to_points(target_edge)
+
+    assert is_in_field(start)
+    assert is_in_field(end)
+
+    return interpolate(start, end, offset)
+
+
+def all_directions() -> list[Vector2D]:
+    return [
+        (-1, 0),
+        (+1, 0),
+        (0, -1),
+        (0, +1),
+    ]
 
 
 @functools.cache
-def resolve(pos: Point2D, direction: Vector2D) -> Point2D:
+def resolve(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
     next_pos = add(pos, direction)
+    next_direction = direction
 
     if not is_in_field(next_pos):
         cur_edge = find_edge_on_minimap(pos, direction)
         target_edge = find_corresponding_edge_with_matching_3d(cur_edge)
 
         next_pos = interpolate_position(
-            pos, direction,
-            cur_edge, target_edge
+            pos, direction, target_edge
         )
 
-    return next_pos
+        assert is_in_field(next_pos)
+
+        # TODO: we also need to update direction, which is always from the outside
+        #  into the field, can be deduced just by checking in all 4 directions and
+        #  finding the cell outside it
+        for d in all_directions():
+            if not is_in_field(add(next_pos, d)):
+                next_direction = multiply_vec(d, -1)
+                break
+        else:
+            assert 'unable to figure out direction'
+
+
+    return next_pos, next_direction
 
 def at(pos):
     return field[pos[0]][pos[1]]
 
 
-def step(pos, direction):
-    next_pos = resolve(pos, direction)
+def step(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
+    next_pos, next_direction = resolve(pos, direction)
+
+    assert is_in_field(next_pos)
 
     if at(next_pos) == '.':
-        return next_pos
+        return next_pos, direction
     elif at(next_pos) == '#':
         # unable to move
-        return pos
+        return pos, direction
     else:
         assert 'where the hell we are?'
 
 
+# 36340 WA!
 if __name__ == '__main__':
     minimap_to_3d_map = solve_for_3d()
 
@@ -360,7 +499,7 @@ if __name__ == '__main__':
         else:
             units = int(move)
             for _ in range(units):
-                pos = step(pos, direction)
+                pos, direction = step(pos, direction)
 
     print(pos)
     print(direction)
