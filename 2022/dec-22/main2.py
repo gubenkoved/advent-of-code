@@ -91,7 +91,7 @@ def is_in_field(pos: Point2D) -> bool:
 
 
 def to_minimap():
-    field_rows, field_cols = len(field), len(field[0])
+    field_rows, field_cols = len(field), max(len(field[r]) for r in range(len(field)))
     minimap = [
         [' ' for _ in range(field_cols // SQUARE_SIZE)]
         for _ in range(field_rows // SQUARE_SIZE)
@@ -346,7 +346,7 @@ def find_edge_on_minimap(pos: Point2D, direction: Vector2D) -> Edge2D:
     assert False, 'unable to find'
 
 
-def is_horizontal(edge: Edge2D):
+def is_horizontal(edge: Edge2D) -> bool:
     p1, p2 = edge
     if p1[0] == p2[0]:
         return True
@@ -356,7 +356,7 @@ def is_horizontal(edge: Edge2D):
         assert 'bad'
 
 
-def unit_vec(vector: Vector2D):
+def unit_vec(vector: Vector2D) -> Vector2D:
     a, b = vector
     a = int(a / abs(a)) if a else 0
     b = int(b / abs(b)) if b else 0
@@ -456,9 +456,6 @@ def resolve(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
 
         assert is_in_field(next_pos)
 
-        # TODO: we also need to update direction, which is always from the outside
-        #  into the field, can be deduced just by checking in all 4 directions and
-        #  finding the cell outside it
         for d in all_directions():
             if not is_in_field(add(next_pos, d)):
                 next_direction = multiply_vec(d, -1)
@@ -466,28 +463,36 @@ def resolve(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
         else:
             assert 'unable to figure out direction'
 
+    assert next_pos is not None
+    assert next_direction is not None
 
     return next_pos, next_direction
 
-def at(pos):
+
+def at(pos: Point2D) -> str:
     return field[pos[0]][pos[1]]
 
 
 def step(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
     next_pos, next_direction = resolve(pos, direction)
 
+    assert next_pos is not None
+    assert next_direction is not None
+
     assert is_in_field(next_pos)
 
     if at(next_pos) == '.':
-        return next_pos, direction
+        return next_pos, next_direction
     elif at(next_pos) == '#':
         # unable to move
         return pos, direction
     else:
-        assert 'where the hell we are?'
+        assert False, 'where the hell we are?'
 
 
-# 36340 WA!
+# 17515 WA! too low
+# 36340 WA! too low
+# solves the sample though...
 if __name__ == '__main__':
     minimap_to_3d_map = solve_for_3d()
 
