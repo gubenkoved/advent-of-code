@@ -1,4 +1,3 @@
-import copy
 import re
 import functools
 import typing
@@ -76,7 +75,7 @@ counter_clockwise = {
 }
 
 
-def is_in_field(pos: Point2D, field=field) -> bool:
+def is_in_field(pos: Point2D, field) -> bool:
     row, col = pos
 
     if row < 0 or row >= len(field):
@@ -91,6 +90,10 @@ def is_in_field(pos: Point2D, field=field) -> bool:
     return True
 
 
+def at(pos: Point2D, field):
+    return field[pos[0]][pos[1]]
+
+
 def to_minimap():
     field_rows, field_cols = len(field), max(len(field[r]) for r in range(len(field)))
     minimap = [
@@ -101,7 +104,7 @@ def to_minimap():
     for mr in range(len(minimap)):
         for mc in range(len(minimap[mr])):
             row, col = mr * SQUARE_SIZE, mc * SQUARE_SIZE
-            if is_in_field((row, col)):
+            if is_in_field((row, col), field):
                 minimap[mr][mc] = 'x'
 
     return minimap
@@ -188,14 +191,6 @@ def solve_for_3d():
         points_3d = [to_3d_map[p2d] for p2d in points_2d]
         return find_plane_axis(points_3d)
 
-    def is_on_minimap(pos: Point2D) -> bool:
-        r, c = pos
-        if r < 0 or r >= len(minimap):
-            return False
-        if c < 0 or c >= len(minimap[r]):
-            return False
-        return True
-
     r, c = first_pos
 
     to_3d_map[(r, c)] = (0, 0, 0)
@@ -251,14 +246,14 @@ def solve_for_3d():
             (r, c + 1),
         ]
         for nr, nc in neighbors:
-            if not is_on_minimap((nr, nc)):
-                continue
-            if minimap[nr][nc] != 'x':
-                continue
             npos = (nr, nc)
+            if not is_in_field(npos, minimap):
+                continue
+            if at(npos, minimap) != 'x':
+                continue
             queue.append((npos, pos))
 
-    # sanity check
+    # sanity check (all 8 cube vertices are present)
     for x in range(2):
         for y in range(2):
             for z in range(2):
@@ -404,8 +399,8 @@ def edge_to_points(edge: Edge2D, field=field) -> (Point2D, Point2D):
         return p1, p2
 
 
-def scale_point(point: Point2D, scale: int) -> Point2D:
-    return point[0] * scale, point[1] * scale
+def scale_point(point: Point2D, factor: int) -> Point2D:
+    return point[0] * factor, point[1] * factor
 
 
 def scale_edge(edge: Edge2D, factor: int) -> Edge2D:
@@ -427,8 +422,8 @@ def interpolate_position(
     target_edge = scale_edge(target_edge_minimap, SQUARE_SIZE)
     start, end = edge_to_points(target_edge)
 
-    assert is_in_field(start)
-    assert is_in_field(end)
+    assert is_in_field(start, field)
+    assert is_in_field(end, field)
 
     return interpolate(start, end, offset)
 
@@ -459,17 +454,14 @@ def entrance_direction_for_edge_on_minimap(edge: Edge2D) -> Vector2D:
         else:
             return 0, +1
 
-    assert 'invalid edge?'
-
 @functools.cache
 def resolve(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
     next_pos = add(pos, direction)
     next_direction = direction
 
-    if not is_in_field(next_pos):
+    if not is_in_field(next_pos, field):
         cur_edge = find_edge_on_minimap(pos, direction)
         target_edge = find_corresponding_edge_with_matching_3d(cur_edge)
-
         next_pos = interpolate_position(
             pos, direction, target_edge
         )
@@ -477,43 +469,21 @@ def resolve(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
 
     assert next_pos is not None
     assert next_direction is not None
-
-    assert is_in_field(next_pos)
+    assert is_in_field(next_pos, field)
 
     return next_pos, next_direction
-
-
-def at(pos: Point2D, field=field) -> str:
-    return field[pos[0]][pos[1]]
 
 
 def step(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
     next_pos, next_direction = resolve(pos, direction)
 
-    if at(next_pos) == '.':
+    if at(next_pos, field) == '.':
         return next_pos, next_direction
-    elif at(next_pos) == '#':
+    elif at(next_pos, field) == '#':
         # unable to move
         return pos, direction
     else:
         assert False, 'where the hell we are?'
-
-
-debug_field = copy.deepcopy(field)
-
-def save_debug_field(name: str) -> None:
-    with open('debug/' + name + '.txt', 'w') as file:
-        for row in debug_field:
-            file.write(''.join(row))
-            file.write('\n')
-
-
-direction_to_char = {
-    (+1, 0): 'v',
-    (-1, 0): '^',
-    (0, -1): '<',
-    (0, 1): '>',
-}
 
 
 if __name__ == '__main__':
@@ -522,22 +492,15 @@ if __name__ == '__main__':
     assert step((0, 50 + 49), (-1, 0)) == ((199, 0), (0, +1))
     assert step((0, 50 + 49 + 1), (-1, 0)) == ((199, 0), (-1, 0))
 
-    debug_field[pos[0]][pos[1]] = direction_to_char[direction]
-
     for move_idx, move in enumerate(parsed_path):
         if move == 'L':
             direction = counter_clockwise[direction]
-            debug_field[pos[0]][pos[1]] = direction_to_char[direction]
         elif move == 'R':
             direction = clockwise[direction]
-            debug_field[pos[0]][pos[1]] = direction_to_char[direction]
         else:
             units = int(move)
             for _ in range(units):
                 pos, direction = step(pos, direction)
-                debug_field[pos[0]][pos[1]] = direction_to_char[direction]
-
-        save_debug_field('%d_%s' % (move_idx, move))
 
     print(pos)
     print(direction)
