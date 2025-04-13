@@ -1,3 +1,4 @@
+import copy
 import re
 import functools
 import typing
@@ -16,7 +17,7 @@ with open('data.txt', 'r') as f:
         if not line:
             break
 
-        field.append(line)
+        field.append(list(line))
 
     path = f.readline()
 
@@ -75,7 +76,7 @@ counter_clockwise = {
 }
 
 
-def is_in_field(pos: Point2D) -> bool:
+def is_in_field(pos: Point2D, field=field) -> bool:
     row, col = pos
 
     if row < 0 or row >= len(field):
@@ -372,7 +373,7 @@ def interpolate(start: Point2D, end: Point2D, offset: int) -> Point2D:
     return add(start, multiply_vec(unit, offset))
 
 
-def edge_to_points(edge: Edge2D) -> (Point2D, Point2D):
+def edge_to_points(edge: Edge2D, field=field) -> (Point2D, Point2D):
     """
     Given the edge on the field resolves it into the two positions on the
     field that both are part of the field. Note how the same edge always have
@@ -394,12 +395,12 @@ def edge_to_points(edge: Edge2D) -> (Point2D, Point2D):
         else:
             p1 = add(p1, (-1, 0))
 
-    if is_in_field(p1) and is_in_field(p2):
+    if is_in_field(p1, field) and is_in_field(p2, field):
         return p1, p2
     else:
         p1, p2 = add(p1, offset), add(p2, offset)
-        assert is_in_field(p1)
-        assert is_in_field(p2)
+        assert is_in_field(p1, field)
+        assert is_in_field(p2, field)
         return p1, p2
 
 
@@ -432,14 +433,33 @@ def interpolate_position(
     return interpolate(start, end, offset)
 
 
-def all_directions() -> list[Vector2D]:
-    return [
-        (-1, 0),
-        (+1, 0),
-        (0, -1),
-        (0, +1),
-    ]
+def entrance_direction_for_edge_on_minimap(edge: Edge2D) -> Vector2D:
+    """
+    Given edge on the minimap figures out the direction it is entered.
+    This is needed once we figure out which edge we end up on to figure
+    the change in the direction.
+    """
+    p1, p2 = edge
 
+    # check above/below
+    if is_horizontal(edge):
+        assert p1[0] == p2[0]
+        min_col = min(p[1] for p in [p1, p2])
+        ref_point = p1[0], min_col
+        if is_in_field(add(ref_point, (-1, 0)), minimap):
+            return -1, 0
+        else:
+            return +1, 0
+    else: # check left/right
+        assert p1[1] == p2[1]
+        min_row = min(p[0] for p in [p1, p2])
+        ref_point = min_row, p1[1]
+        if is_in_field(add(ref_point, (0, -1)), minimap):
+            return 0, -1
+        else:
+            return 0, +1
+
+    assert 'invalid edge?'
 
 @functools.cache
 def resolve(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
@@ -453,33 +473,22 @@ def resolve(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
         next_pos = interpolate_position(
             pos, direction, target_edge
         )
-
-        assert is_in_field(next_pos)
-
-        for d in all_directions():
-            if not is_in_field(add(next_pos, d)):
-                next_direction = multiply_vec(d, -1)
-                break
-        else:
-            assert 'unable to figure out direction'
-
-    assert next_pos is not None
-    assert next_direction is not None
-
-    return next_pos, next_direction
-
-
-def at(pos: Point2D) -> str:
-    return field[pos[0]][pos[1]]
-
-
-def step(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
-    next_pos, next_direction = resolve(pos, direction)
+        next_direction = entrance_direction_for_edge_on_minimap(target_edge)
 
     assert next_pos is not None
     assert next_direction is not None
 
     assert is_in_field(next_pos)
+
+    return next_pos, next_direction
+
+
+def at(pos: Point2D, field=field) -> str:
+    return field[pos[0]][pos[1]]
+
+
+def step(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
+    next_pos, next_direction = resolve(pos, direction)
 
     if at(next_pos) == '.':
         return next_pos, next_direction
@@ -490,21 +499,45 @@ def step(pos: Point2D, direction: Vector2D) -> (Point2D, Vector2D):
         assert False, 'where the hell we are?'
 
 
-# 17515 WA! too low
-# 36340 WA! too low
-# solves the sample though...
+debug_field = copy.deepcopy(field)
+
+def save_debug_field(name: str) -> None:
+    with open('debug/' + name + '.txt', 'w') as file:
+        for row in debug_field:
+            file.write(''.join(row))
+            file.write('\n')
+
+
+direction_to_char = {
+    (+1, 0): 'v',
+    (-1, 0): '^',
+    (0, -1): '<',
+    (0, 1): '>',
+}
+
+
 if __name__ == '__main__':
     minimap_to_3d_map = solve_for_3d()
 
-    for move in parsed_path:
+    assert step((0, 50 + 49), (-1, 0)) == ((199, 0), (0, +1))
+    assert step((0, 50 + 49 + 1), (-1, 0)) == ((199, 0), (-1, 0))
+
+    debug_field[pos[0]][pos[1]] = direction_to_char[direction]
+
+    for move_idx, move in enumerate(parsed_path):
         if move == 'L':
             direction = counter_clockwise[direction]
+            debug_field[pos[0]][pos[1]] = direction_to_char[direction]
         elif move == 'R':
             direction = clockwise[direction]
+            debug_field[pos[0]][pos[1]] = direction_to_char[direction]
         else:
             units = int(move)
             for _ in range(units):
                 pos, direction = step(pos, direction)
+                debug_field[pos[0]][pos[1]] = direction_to_char[direction]
+
+        save_debug_field('%d_%s' % (move_idx, move))
 
     print(pos)
     print(direction)
