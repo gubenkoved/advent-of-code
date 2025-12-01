@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -36,13 +37,26 @@ func main() {
 		}
 
 		if direction == "L" {
-			current = (current + 100 - count) % 100
-		} else {
-			current = (current + count) % 100
-		}
+			previous := current
+			current -= count
 
-		if current == 0 {
-			result += 1
+			if current > 0 {
+				continue
+			}
+
+			full := int(math.Abs(float64(current / 100)))
+			current = (current + (full+1)*100) % 100
+
+			if previous > 0 {
+				result += full + 1
+			} else {
+				result += full
+			}
+
+		} else {
+			current += count
+			result += current / 100
+			current = current % 100
 		}
 	}
 	fmt.Println(result)
