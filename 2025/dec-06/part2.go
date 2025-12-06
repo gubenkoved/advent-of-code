@@ -45,9 +45,33 @@ func readNum(lines []string, colIdx int) (int, bool) {
 	return parseInt(numString)
 }
 
+func fill(str string, width int, filler string) string {
+	if len(filler) != 1 {
+		panic("bad filled")
+	}
+	k := width - len(str)
+	toBeAdded := []string{}
+	for range k {
+		toBeAdded = append(toBeAdded, filler)
+	}
+	return str + strings.Join(toBeAdded, "")
+}
+
 func main() {
 	data, _ := os.ReadFile("data.txt")
 	lines := strings.Split(string(data), "\n")
+
+	maxLen := 0
+	for _, line := range lines {
+		maxLen = max(len(line), maxLen)
+	}
+
+	// normalize the lines
+	normalizedLines := []string{}
+	for _, line := range lines {
+		normalizedLines = append(normalizedLines, fill(line, maxLen, " "))
+	}
+	lines = normalizedLines
 
 	colCount := len(lines[0])
 
