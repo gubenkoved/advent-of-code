@@ -17,10 +17,6 @@ func main() {
 	// count of ways to reach a given point
 	counter := map[Pos]int{}
 
-	// columns where the beam is for the next row
-	beamColums := map[int]bool{}
-	nextBeamColumns := map[int]bool{}
-
 	// simulate the beam downwards
 	rows := len(lines)
 	cols := len(lines[0])
@@ -30,26 +26,19 @@ func main() {
 			char := lines[row][col]
 
 			if char == 'S' {
-				nextBeamColumns[col] = true
 				counter[Pos{row + 1, col}] += 1
 			}
 
-			if beamColums[col] {
+			if counter[pos] > 0 {
 				// there is a beam from previous line here
 				if char == '^' {
-					nextBeamColumns[col-1] = true
-					nextBeamColumns[col+1] = true
-
 					counter[Pos{row + 1, col - 1}] += counter[pos]
 					counter[Pos{row + 1, col + 1}] += counter[pos]
 				} else if char == '.' {
 					counter[Pos{row + 1, col}] += counter[pos]
-					nextBeamColumns[col] = true
 				}
 			}
 		}
-		beamColums = nextBeamColumns
-		nextBeamColumns = map[int]bool{}
 	}
 
 	// sum the ways for the last row
