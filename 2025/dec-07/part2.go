@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
 	"strings"
@@ -47,4 +48,21 @@ func main() {
 		sum += counter[Pos{rows - 1, col}]
 	}
 	fmt.Println(sum)
+
+	outFile, err := os.OpenFile("data.out.csv", os.O_EXCL|os.O_WRONLY, 0644)
+
+	if err != nil {
+		panic(err)
+	}
+
+	writer := csv.NewWriter(outFile)
+	writer.Write([]string{"row", "col", "count"})
+	for k, v := range counter {
+		writeErr := writer.Write([]string{fmt.Sprintf("%d", k[0]), fmt.Sprintf("%d", k[1]), fmt.Sprintf("%d", v)})
+		if writeErr != nil {
+			panic(writeErr)
+		}
+	}
+	writer.Flush()
+	outFile.Close()
 }
