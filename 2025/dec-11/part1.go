@@ -11,42 +11,49 @@ import (
 func main() {
 	data, _ := os.ReadFile("data.txt")
 
-	adjacency := map[string][]string{}
+	parents := map[string][]string{}
 
 	for _, line := range strings.Split(string(data), "\n") {
 		s1 := strings.Split(line, ":")
 		source := s1[0]
-		destinations := strings.Split(s1[1], " ")
-
-		if adjacency[source] == nil {
-			adjacency[source] = []string{}
-		}
+		destinations := strings.Split(s1[1][1:], " ")
 
 		for _, dest := range destinations {
-			adjacency[source] = append(adjacency[source], dest)
+			if parents[dest] == nil {
+				parents[dest] = []string{}
+			}
+
+			parents[dest] = append(parents[dest], source)
 		}
 	}
 
-	queue := []string{"you"}
-	counts := map[string]int{}
-	counts["you"] = 1
+	var countPaths func(from, to string) int
 
-	visited := map[string]bool{}
+	countPaths = func(from, to string) int {
 
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
+		var inner func(target string) int
 
-		if visited[cur] {
-			continue
+		memo := map[string]int{}
+
+		inner = func(target string) int {
+			if target == from {
+				return 1
+			}
+
+			if m, ok := memo[target]; ok {
+				return m
+			}
+
+			result := 0
+			for _, parent := range parents[target] {
+				result += inner(parent)
+			}
+			memo[target] = result
+			return result
 		}
-		visited[cur] = true
 
-		for _, neigh := range adjacency[cur] {
-			counts[neigh] += counts[cur]
-			queue = append(queue, neigh)
-		}
+		return inner(to)
 	}
 
-	fmt.Println(counts["out"])
+	fmt.Println(countPaths("you", "out"))
 }
