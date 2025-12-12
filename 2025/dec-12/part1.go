@@ -93,10 +93,12 @@ func main() {
 
 	for _, puzzle := range puzzles {
 		needed := 0
+		totalBlockCount := 0
 		for idx, count := range puzzle.Counts {
 			needed += blocks[idx].Area * count
+			totalBlockCount += count
 		}
-		fmt.Printf("%#v: needed: %d, available: %d\n", puzzle, needed, puzzle.Width*puzzle.Height)
+		fmt.Printf("%#v: needed: %d, available: %d, total blocks: %d, number of 3x3 free places: %d\n", puzzle, needed, puzzle.Width*puzzle.Height, totalBlockCount, (puzzle.Width/3)*(puzzle.Height/3))
 
 		if needed <= puzzle.Width*puzzle.Height {
 			count += 1
